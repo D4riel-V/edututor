@@ -1,4 +1,9 @@
--- EduTutor - Script de creación de la base de datos 
+-- ============================================================
+-- EduTutor - Script de creación de la base de datos (MySQL 8)
+-- Ejecutar en MySQL Workbench: File > Open SQL Script > rayo
+-- Se puede ejecutar varias veces sin borrar datos.
+-- ============================================================
+
 CREATE DATABASE IF NOT EXISTS edututor CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE edututor;
 
@@ -100,4 +105,5 @@ CREATE TABLE IF NOT EXISTS peticiones_materia (
 
 INSERT IGNORE INTO roles (nombre) VALUES ('Administrador'), ('Tutor'), ('Estudiante');
 
--- Nota: la cuenta de administrador y las materias de ejemplo las crea el servidor automáticamente la primera vez que se inicia.
+-- Nota: la cuenta de administrador y las materias de ejemplo las crea
+-- el servidor automáticamente la primera vez que se inicia.

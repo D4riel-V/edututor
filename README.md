@@ -1,8 +1,7 @@
 # EduTutor
 
-Plataforma web de tutorías académicas. Interfaz en HTML, CSS y JavaScript; servidor en Node.js + Express; base de datos MySQL (administrada con MySQL Workbench).
+Plataforma web de tutorías académicas. Interfaz en HTML, CSS y JavaScript; servidor en Node.js + Express; base de datos MySQL administrada con MySQL Workbench.
 
-> Para publicarla en Internet gratis, lee **PUBLICAR.md**.
 
 ## Requisitos
 
@@ -12,7 +11,7 @@ Plataforma web de tutorías académicas. Interfaz en HTML, CSS y JavaScript; ser
 
 ## Cómo ponerlo a funcionar en tu computadora
 
-1. **Descomprime** la carpeta `edututor`.
+1. **Descarga** la carpeta `edututor`.
 
 2. **Crea la base de datos.** Abre MySQL Workbench, conéctate a tu servidor local, ve a
    `File > Open SQL Script`, elige `database/edututor.sql` y presiona el botón del rayo (Execute).
@@ -25,17 +24,18 @@ Plataforma web de tutorías académicas. Interfaz en HTML, CSS y JavaScript; ser
    notepad .env
    ```
 
-   (en Mac/Linux: `cp .env.example .env`). En el Bloc de notas cambia
-   `escribe_aqui_tu_contrasena_de_mysql` por tu contraseña de MySQL y guarda.
+   (en Mac/Linux: `cp .env.example .env`).
+
+4. En el Bloc de notas cambia `escribe_aqui_tu_contrasena_de_mysql` por tu contraseña de MySQL y guarda.
    El usuario por defecto es `root`; cámbialo en `DB_USER` si usas otro.
 
-4. **Instala las dependencias:**
+5. **Instala las dependencias:**
 
    ```
    npm install
    ```
 
-5. **Inicia el servidor:**
+6. **Inicia el servidor:**
 
    ```
    npm start
@@ -44,16 +44,14 @@ Plataforma web de tutorías académicas. Interfaz en HTML, CSS y JavaScript; ser
    Debe aparecer: `EduTutor funcionando en http://localhost:3000`.
    La primera vez también se crean la cuenta de administrador y 8 materias de ejemplo.
 
-6. **Abre el navegador** en http://localhost:3000
+7. **Abre el navegador** en http://localhost:3000
 
 ## Cuenta de administrador (solo en tu computadora)
 
-| Correo | Contraseña |
-| --- | --- |
-| admin@edututor.com | Admin123 |
+Correo: admin@edututor.com
+Contraseña: Admin123
 
-Cámbiala desde "Perfil". En Internet esta cuenta no existe: se crea con las variables `ADMIN_EMAIL` y `ADMIN_PASSWORD` (ver PUBLICAR.md).
-Los estudiantes y tutores se registran solos desde "Regístrate aquí".
+Cámbiala desde "Perfil".
 
 ## Flujo de prueba sugerido
 
@@ -70,7 +68,7 @@ edututor/
 ├── database/edututor.sql     Script de la base de datos
 ├── server/                   Servidor Express
 │   ├── app.js                Punto de entrada
-│   ├── config/db.js          Conexión a MySQL (lee el archivo .env)
+│   ├── config/db.js          Conexión a MySQL 
 │   ├── middlewares/auth.js   Control de sesión y roles
 │   ├── routes/               API: auth, perfil, usuarios, materias,
 │   │                         disponibilidades, tutorias, solicitudes, estadisticas
@@ -81,18 +79,5 @@ edututor/
 │   └── css/  js/
 ├── .env.example              Plantilla de configuración (copiar como .env)
 ├── PUBLICAR.md               Guía para publicar en Internet
-└── README.md
+└── README.md                 Guía para publicar en local.
 ```
-
-## Problemas comunes
-
-| Problema | Causa probable | Solución |
-| --- | --- | --- |
-| "No se pudo conectar con la base de datos" | MySQL apagado, contraseña incorrecta o no se ejecutó el script SQL | Revisa los 3 puntos; prueba la misma conexión en Workbench |
-| `Access denied for user 'root'` | Contraseña incorrecta en `.env` | Corrígela en el archivo `.env` y vuelve a iniciar |
-| `Unknown database 'edututor'` | No se ejecutó el script SQL | Hazlo en MySQL Workbench (paso 2) |
-| `Client does not support authentication protocol` | Cuenta con autenticación antigua | En Workbench: `ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'tu_contraseña';` |
-| `EADDRINUSE` / puerto 3000 en uso | Otra aplicación usa el puerto | Cambia `PORT=3001` en el archivo `.env` |
-| `npm` no se reconoce | Node.js no está instalado | Instala Node.js y abre una terminal nueva |
-| La página se ve sin estilos o no carga | Abriste `index.html` con doble clic | Debes entrar por http://localhost:3000 con el servidor encendido |
-| `Demasiados intentos fallidos` | 8 contraseñas incorrectas seguidas | Espera 15 minutos o reinicia el servidor |

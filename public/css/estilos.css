@@ -393,3 +393,34 @@ dialog[open]::backdrop { animation: aparece .25s ease-out; backdrop-filter: blur
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* ---------- Logo ---------- */
+.marca { display: inline-flex; align-items: center; gap: 10px; }
+.marca-logo { width: 36px; height: 36px; border-radius: 22%; display: block; }
+.acceso-titulo { margin: 0 0 4px; line-height: 0; }
+.acceso-logo { display: block; margin: 0 auto 8px; width: min(240px, 70%); height: auto; }
+
+/* ---------- Acentos amarillos (del logo; el azul y blanco siguen predominando) ---------- */
+:root { --amarillo: #ffc107; --amarillo-suave: #fff3cd; }
+
+/* Barra superior: filete amarillo y subrayado del menú */
+.topbar { border-bottom: 3px solid var(--amarillo); }
+.nav a::after { background: var(--amarillo); height: 3px; }
+.nav a.activo { background: rgba(255, 255, 255, .16); }
+
+/* Títulos de página: pequeña barra amarilla debajo */
+.contenedor > h1::after { content: ""; display: block; width: 44px; height: 4px; margin-top: 6px; border-radius: 4px; background: var(--amarillo); }
+
+/* Login y registro: borde superior amarillo en la caja */
+.acceso-caja { border-top: 5px solid var(--amarillo); }
+.acceso-logo + h1::after, .acceso-caja > h1[style]::after { content: none; }
+
+/* Tarjetas de estadísticas y de tutorías */
+.stat { border-top: 3px solid var(--amarillo); }
+.card-tutoria:hover { border-color: var(--amarillo); }
+
+/* Tablas: línea amarilla bajo el encabezado */
+th { border-bottom: 2px solid var(--amarillo); }
+
+/* Selección de texto */
+::selection { background: var(--amarillo-suave); color: var(--texto); }

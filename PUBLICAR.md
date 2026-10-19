@@ -1,23 +1,18 @@
-# Cómo publicar EduTutor en Internet (gratis)
+# Cómo publicar en Internet
 
 Se usan tres servicios gratuitos:
 
-| Para qué | Servicio | Dirección |
-| --- | --- | --- |
-| Guardar el código | GitHub | github.com |
-| Base de datos MySQL | Aiven (plan Free) | console.aiven.io |
-| Servidor de la aplicación | Render (plan Free) | render.com |
+Guardar el código: GitHub - github.com 
+Base de datos MySQL: Aiven (plan Free) - console.aiven.io 
+Servidor de la aplicación: Render (plan Free) - render.com 
 
-Los planes gratuitos pueden cambiar. Los nombres de los botones también pueden variar un poco; sigue la idea de cada paso.
-Tiempo estimado: 30 a 45 minutos la primera vez.
-
----
+se usaran nada mas los planes gratuitos, los cuales están sujetos a constantes cambios.
 
 ## Parte 1. Crear la base de datos en Aiven
 
-1. Entra a **console.aiven.io** y crea una cuenta (según su página, el plan gratis no pide tarjeta).
+1. Entra a **console.aiven.io** y crea una cuenta.
 2. Presiona **Create service** y elige **MySQL**.
-3. En **Service tier** elige el plan gratuito (Free). En el plan gratis no se puede elegir la nube ni la región; omite ese campo. Ponle un nombre en **Service details**, por ejemplo `edututor-db`, y presiona **Create service**.
+3. En **Service tier** elige el plan gratuito (Free). En el plan gratis no se puede elegir la nube ni la región; omite ese campo. Ponle un nombre a tu base de datos en **Service details** y presiona **Create service**.
 4. Espera unos minutos hasta que el estado sea **Running**.
 5. En la pantalla del servicio (Overview) copia y guarda en un bloc de notas estos 5 datos:
    - **Host** (algo como `edututor-db-xxxx.aivencloud.com`)
@@ -26,28 +21,27 @@ Tiempo estimado: 30 a 45 minutos la primera vez.
    - **Password** (presiona el ojo para verla)
    - **Database name** (normalmente `defaultdb`)
 
-No hace falta crear tablas: EduTutor las crea solo la primera vez que arranca.
+Son los que necesitaremos mas adelante.
 
----
+Nota: No hace falta crear tablas, estas se crean la primera vez que arranca el sitio.
+
 
 ## Parte 2. Subir el código a GitHub
 
 1. Entra a **github.com** y crea una cuenta.
-2. Presiona **New repository**. Nombre: `edututor`. Puede ser Public o Private. Presiona **Create repository**.
+2. Presiona **New repository**. Nombre: `el nombre de tu sitio`. Puede ser Public o Private. Presiona **Create repository**.
 3. En la pantalla que aparece, busca el enlace **uploading an existing file**.
-4. Abre la carpeta `edututor` en tu computadora y arrastra a la página **solo el contenido**:
-   `database`, `public`, `server`, `package.json`, `package-lock.json`, `README.md`, `PUBLICAR.md`, `.env.example` y `.gitignore`.
-5. **No arrastres** la carpeta `node_modules` ni el archivo `.env`. Contienen cosas pesadas o contraseñas.
+4. Abre la carpeta de tu sitio web en tu computadora y arrastra a la página **solo el contenido**:
+5. **No arrastres** carpetas o archivos que contengan contraseñas ni informacion importante.
 6. Abajo presiona **Commit changes**.
-
----
+   
 
 ## Parte 3. Publicar el servidor en Render
 
 1. Entra a **render.com** y crea la cuenta con el botón **GitHub** (así se conectan).
-2. Presiona **New +** y elige **Web Service**. Selecciona tu repositorio `edututor` (si no aparece, autoriza a Render a ver tus repositorios).
+2. Presiona **New +** y elige **Web Service**. Selecciona tu repositorio (si no aparece, autoriza a Render a ver tus repositorios).
 3. Completa:
-   - **Name:** `edututor` (será parte de tu dirección web)
+   - **Name:** `mi-sitio-web` (será parte de tu dirección web)
    - **Branch:** `main`
    - **Runtime / Language:** Node
    - **Build Command:** `npm install`
@@ -69,19 +63,17 @@ No hace falta crear tablas: EduTutor las crea solo la primera vez que arranca.
    | `ADMIN_PASSWORD` | la contraseña del administrador (mínimo 8 caracteres) |
 
 5. Presiona **Create Web Service**. Render instala todo y arranca; tarda unos minutos.
-6. Cuando diga **Live**, arriba verás tu dirección, algo como `https://edututor-xxxx.onrender.com`. Esa es tu página en Internet.
+6. Cuando diga **Live**, arriba verás tu dirección, algo como `https://mi-sitio-web-xxxx.onrender.com`. Esa es tu página en Internet.
 
----
 
 ## Parte 4. Probar
 
 1. Abre tu dirección de Render.
 2. Entra con `ADMIN_EMAIL` y `ADMIN_PASSWORD`.
-3. Prueba registrar un tutor y un estudiante desde otro navegador o desde tu celular.
+3. Prueba registrando informacion desde otro navegador o desde tu celular.
 
 Si no carga, en Render abre la pestaña **Logs**: el servidor escribe ahí el motivo.
 
----
 
 ## Cosas que debes saber del plan gratuito
 
@@ -94,11 +86,11 @@ Si no carga, en Render abre la pestaña **Logs**: el servidor escribe ahí el mo
 
 Con MySQL Workbench crea una conexión nueva con el Host, Port, User y Password de Aiven (en la pestaña SSL elige "Require") y ejecuta ahí tu script de registros.
 
-## Seguridad (importante)
+## Seguridad
 
-- Nunca subas a GitHub un archivo con contraseñas. El archivo `.env` ya está excluido en `.gitignore`.
+- Nunca subas a GitHub un archivo con contraseñas.
 - Cambia la contraseña del administrador si alguien más la llega a ver.
-- La conexión a la base está cifrada. Por simplicidad no se verifica el certificado del servidor; para un uso serio se debería agregar.
+- La conexión a la base está cifrada. Por simplicidad no se verifica, mas adelante es indispensable esa verificacion.
 
 ## Cómo actualizar la página después de publicarla
 

@@ -131,7 +131,7 @@ tr:last-child td { border-bottom: 0; }
 /* ---------- Etiquetas de estado ---------- */
 .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .78rem; font-weight: 600; background: #e2e8f0; color: #334155; }
 .b-Pendiente { background: #fef3c7; color: var(--ambar); }
-.b-Aceptada, .b-Activa { background: #dcfce7; color: var(--verde); }
+.b-Aceptada, .b-Activa, .b-Aprobada { background: #dcfce7; color: var(--verde); }
 .b-Rechazada, .b-Cancelada { background: #fee2e2; color: var(--rojo); }
 .b-Cerrada { background: #e2e8f0; color: #475569; }
 .b-materia { background: var(--azul-claro); color: var(--azul-oscuro); }
@@ -188,3 +188,208 @@ dialog h2 { margin-top: 0; }
 .pie-acceso { text-align: center; margin-top: 16px; font-size: .92rem; }
 .error-form { background: #fee2e2; color: var(--rojo); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; display: none; font-size: .92rem; }
 .error-form.visible { display: block; }
+
+/* ---------- Ver contraseña ---------- */
+.pw-caja { position: relative; }
+.pw-caja input { padding-right: 78px; }
+.pw-ver { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: 0; color: var(--azul); font: inherit; font-size: .85rem; font-weight: 600; padding: 4px 8px; border-radius: 6px; cursor: pointer; }
+.pw-ver:hover { background: var(--azul-claro); }
+
+/* ---------- Reportes ---------- */
+.filtros-fila { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+.filtros-fila .campo { margin-bottom: 0; }
+.filtros-fila input[type="date"] { width: auto; }
+.seccion-titulo { margin: 26px 0 10px; font-size: 1.1rem; color: var(--azul-oscuro); }
+.stat .sub { color: var(--suave); font-size: .78rem; margin-top: 2px; }
+.dos-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; align-items: start; }
+.dos-col > .tarjeta { margin-bottom: 0; }
+.barra-fila { margin-bottom: 11px; }
+.barra-fila .et { display: flex; justify-content: space-between; gap: 8px; font-size: .9rem; }
+.barra-fila .et span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.barra-verde > div { background: var(--verde); }
+.barra-ambar > div { background: #d97706; }
+.columnas { display: flex; align-items: flex-end; gap: 10px; height: 170px; padding-top: 10px; overflow-x: auto; }
+.col-mes { flex: 1 0 54px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; font-size: .75rem; color: var(--suave); }
+.col-mes .pares { display: flex; align-items: flex-end; gap: 3px; height: 130px; }
+.col-mes .pares i { display: block; width: 14px; background: var(--azul); border-radius: 3px 3px 0 0; min-height: 2px; }
+.col-mes .pares i.t { background: var(--verde); }
+.col-mes .pares i.u { background: #d97706; }
+.leyenda { display: flex; gap: 14px; flex-wrap: wrap; font-size: .82rem; color: var(--suave); margin-top: 8px; }
+.leyenda i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; }
+.notas-tabla { font-size: .85rem; color: var(--suave); }
+@media print { .topbar, .no-imprimir, .toast { display: none !important; } body { background: #fff; } }
+
+/* =====================================================
+   Mejoras visuales y animaciones sutiles
+   (se desactivan si el sistema pide "reducir movimiento")
+   ===================================================== */
+html { scroll-behavior: smooth; }
+::selection { background: var(--azul-claro); }
+input[type="checkbox"], input[type="radio"] { accent-color: var(--azul); }
+
+@keyframes subir { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes aparecer { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes fundir { from { opacity: 0; } to { opacity: 1; } }
+@keyframes crecer { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes crecerY { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes sacudir { 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
+@keyframes girar { to { transform: rotate(360deg); } }
+@keyframes desplazar { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
+
+/* Barra superior */
+.topbar { box-shadow: 0 2px 10px rgba(15, 23, 42, .18); background: linear-gradient(90deg, #1e3a8a, #1d4ed8); }
+.marca { transition: opacity .2s; }
+.marca:hover { opacity: .85; }
+.nav a { position: relative; transition: background .2s, color .2s; }
+.nav a::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: 3px; height: 2px; background: #fff; border-radius: 2px; transform: scaleX(0); transition: transform .25s ease; }
+.nav a:hover::after, .nav a.activo::after { transform: scaleX(1); }
+.nav.abierto { animation: subir .2s ease; }
+
+/* Entrada de las páginas y tarjetas */
+.contenedor > * { animation: subir .45s cubic-bezier(.2, .8, .2, 1) backwards; }
+.contenedor > :nth-child(2) { animation-delay: .05s; }
+.contenedor > :nth-child(3) { animation-delay: .1s; }
+.contenedor > :nth-child(4) { animation-delay: .15s; }
+.contenedor > :nth-child(n+5) { animation-delay: .2s; }
+
+.tarjeta, .stat, .card-tutoria { box-shadow: 0 1px 2px rgba(15, 23, 42, .04); transition: box-shadow .25s ease, transform .25s ease, border-color .25s ease; }
+.card-tutoria:hover, .stat:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(30, 58, 138, .12); border-color: #bfdbfe; }
+
+/* Listas y tablas: aparecen en cascada */
+.stats > *, .grid-cards > * { animation: subir .45s cubic-bezier(.2, .8, .2, 1) backwards; }
+.stats > :nth-child(2), .grid-cards > :nth-child(2) { animation-delay: .04s; }
+.stats > :nth-child(3), .grid-cards > :nth-child(3) { animation-delay: .08s; }
+.stats > :nth-child(4), .grid-cards > :nth-child(4) { animation-delay: .12s; }
+.stats > :nth-child(5), .grid-cards > :nth-child(5) { animation-delay: .16s; }
+.stats > :nth-child(6), .grid-cards > :nth-child(6) { animation-delay: .2s; }
+.stats > :nth-child(n+7), .grid-cards > :nth-child(n+7) { animation-delay: .24s; }
+tbody tr { animation: fundir .4s ease backwards; transition: background .15s; }
+tbody tr:nth-child(2) { animation-delay: .03s; } tbody tr:nth-child(3) { animation-delay: .06s; }
+tbody tr:nth-child(4) { animation-delay: .09s; } tbody tr:nth-child(5) { animation-delay: .12s; }
+tbody tr:nth-child(6) { animation-delay: .15s; } tbody tr:nth-child(n+7) { animation-delay: .18s; }
+tbody tr:hover { background: #f8fafc; }
+
+/* Botones y campos */
+.btn { transition: background .2s, transform .15s, box-shadow .2s, border-color .2s; }
+.btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(30, 58, 138, .22); }
+.btn:active:not(:disabled) { transform: translateY(0) scale(.98); box-shadow: none; }
+.btn-sec:hover:not(:disabled) { box-shadow: 0 4px 12px rgba(30, 58, 138, .1); }
+input, select, textarea { transition: border-color .2s, box-shadow .2s, background .2s; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--azul); box-shadow: 0 0 0 3px rgba(29, 78, 216, .18); }
+.checks label, .radios label { cursor: pointer; }
+
+/* Gráficas */
+.barra > div { transform-origin: left; animation: crecer .9s cubic-bezier(.2, .8, .2, 1) backwards; }
+.col-mes .pares i { transform-origin: bottom; animation: crecerY .8s cubic-bezier(.2, .8, .2, 1) backwards; transition: filter .2s; }
+.col-mes .pares i:hover { filter: brightness(1.15); }
+
+/* Ventanas, avisos y mensajes */
+dialog[open] { animation: aparecer .25s cubic-bezier(.2, .8, .2, 1); }
+dialog[open]::backdrop { animation: fundir .25s ease; }
+.error-form.visible { animation: sacudir .4s ease; }
+.toast { transition: opacity .3s ease, transform .3s cubic-bezier(.2, .8, .2, 1); }
+.badge { transition: transform .2s; }
+
+/* Acceso y registro */
+.acceso { background: linear-gradient(120deg, #1e3a8a, #2563eb, #1d4ed8, #1e40af); background-size: 300% 300%; animation: desplazar 18s ease-in-out infinite alternate; }
+.acceso-caja { animation: aparecer .55s cubic-bezier(.2, .8, .2, 1) backwards; }
+.acceso-caja .btn:disabled { position: relative; color: transparent; }
+.acceso-caja .btn:disabled::after { content: ""; position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border: 2px solid #fff; border-right-color: transparent; border-radius: 50%; animation: girar .7s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+
+/* =====================================================================
+   Pulido visual y animaciones sutiles
+   (todo se desactiva si el sistema pide "reducir movimiento")
+   ===================================================================== */
+:root {
+  --sombra-1: 0 1px 2px rgba(15, 23, 42, .05), 0 1px 3px rgba(15, 23, 42, .06);
+  --sombra-2: 0 6px 18px rgba(15, 23, 42, .10);
+  --suave-ease: cubic-bezier(.22, .61, .36, 1);
+}
+
+@keyframes aparece { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sube-suave { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes entra-caja { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes crece-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes crece-y { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes sacude { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+@keyframes fondo-mueve { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+/* Entrada de cada página: el contenido aparece escalonado */
+body { animation: aparece .3s ease-out; }
+.contenedor > * { animation: sube-suave .45s var(--suave-ease) backwards; }
+.contenedor > :nth-child(2) { animation-delay: .04s; }
+.contenedor > :nth-child(3) { animation-delay: .08s; }
+.contenedor > :nth-child(4) { animation-delay: .12s; }
+.contenedor > :nth-child(5) { animation-delay: .16s; }
+.contenedor > :nth-child(n+6) { animation-delay: .20s; }
+
+/* Tarjetas de resultados y de números: aparecen una tras otra */
+.grid-cards > *, .stats > * { animation: sube-suave .4s var(--suave-ease) backwards; }
+.grid-cards > :nth-child(2), .stats > :nth-child(2) { animation-delay: .05s; }
+.grid-cards > :nth-child(3), .stats > :nth-child(3) { animation-delay: .10s; }
+.grid-cards > :nth-child(4), .stats > :nth-child(4) { animation-delay: .15s; }
+.grid-cards > :nth-child(5), .stats > :nth-child(5) { animation-delay: .20s; }
+.grid-cards > :nth-child(6), .stats > :nth-child(6) { animation-delay: .25s; }
+.grid-cards > :nth-child(n+7), .stats > :nth-child(n+7) { animation-delay: .30s; }
+tbody tr { animation: aparece .3s ease-out backwards; }
+
+/* Superficies: sombra suave y elevación al pasar el cursor */
+.tarjeta, .stat, .card-tutoria { box-shadow: var(--sombra-1); }
+.card-tutoria, .stat { transition: transform .2s var(--suave-ease), box-shadow .2s var(--suave-ease), border-color .2s; }
+.card-tutoria:hover, .stat:hover { transform: translateY(-3px); box-shadow: var(--sombra-2); border-color: #bfdbfe; }
+.topbar { box-shadow: 0 2px 10px rgba(15, 23, 42, .18); }
+tbody tr { transition: background-color .15s; }
+tbody tr:hover { background: #f8fafc; }
+
+/* Navegación: subrayado que se desliza */
+.nav a { position: relative; transition: background-color .2s, color .2s; }
+.nav a::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: 3px; height: 2px; border-radius: 2px; background: #fff; transform: scaleX(0); transition: transform .25s var(--suave-ease); }
+.nav a:hover::after, .nav a.activo::after { transform: scaleX(1); }
+.marca { transition: opacity .2s; }
+.marca:hover { opacity: .85; }
+
+/* Botones */
+.btn { transition: background-color .18s, transform .15s var(--suave-ease), box-shadow .18s, border-color .18s; }
+.btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(29, 78, 216, .25); }
+.btn-peligro:hover:not(:disabled) { box-shadow: 0 4px 12px rgba(185, 28, 28, .25); }
+.btn-ok:hover:not(:disabled) { box-shadow: 0 4px 12px rgba(21, 128, 61, .25); }
+.btn:active:not(:disabled) { transform: translateY(0) scale(.97); box-shadow: none; }
+.nav button { transition: background-color .2s, color .2s; }
+
+/* Campos de formulario */
+input, select, textarea { transition: border-color .18s, box-shadow .18s, background-color .18s; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--azul); box-shadow: 0 0 0 3px rgba(29, 78, 216, .18); }
+.checks label, .radios label { cursor: pointer; transition: color .15s; }
+.checks label:hover, .radios label:hover { color: var(--azul); }
+
+/* Mensajes */
+.error-form.visible { animation: sacude .4s ease-out; }
+.toast { transition: opacity .25s ease, transform .3s var(--suave-ease); }
+.badge { transition: transform .15s; }
+tr:hover .badge { transform: scale(1.05); }
+
+/* Ventanas emergentes */
+dialog[open] { animation: entra-caja .25s var(--suave-ease); }
+dialog[open]::backdrop { animation: aparece .25s ease-out; backdrop-filter: blur(2px); }
+
+/* Pantalla de acceso */
+.acceso { background: linear-gradient(120deg, #1e3a8a, #2563eb, #1d4ed8, #1e3a8a); background-size: 300% 300%; animation: fondo-mueve 18s ease infinite; }
+.acceso-caja { animation: entra-caja .5s var(--suave-ease) backwards; }
+
+/* Gráficas: barras y columnas crecen al aparecer */
+.barra > div { transform-origin: left; animation: crece-x .8s var(--suave-ease) backwards; }
+.col-mes .pares i { transform-origin: bottom; animation: crece-y .8s var(--suave-ease) backwards; }
+.col-mes .pares i.t { animation-delay: .06s; }
+.col-mes .pares i.u { animation-delay: .12s; }
+
+/* Menú móvil */
+@media (max-width: 860px) { .nav.abierto { animation: sube-suave .25s var(--suave-ease); } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

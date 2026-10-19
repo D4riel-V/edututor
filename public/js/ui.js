@@ -14,6 +14,7 @@ const MENU = {
   ],
   Administrador: [
     ['Usuarios', '/admin/usuarios.html'],
+    ['Tutorías', '/admin/tutorias.html'],
     ['Materias', '/admin/materias.html'],
     ['Estadísticas', '/admin/estadisticas.html'],
     ['Perfil', '/perfil.html']
@@ -87,4 +88,72 @@ async function iniciarPagina(rolesPermitidos) {
   }
   construirNav(usuario);
   return usuario;
+}
+
+// Agrega un botón "Ver / Ocultar" a todos los campos de contraseña de la página.
+function activarVerContrasena() {
+  document.querySelectorAll('input[type="password"]').forEach((input) => {
+    if (input.dataset.ojo) return;
+    input.dataset.ojo = '1';
+    const caja = document.createElement('div');
+    caja.className = 'pw-caja';
+    input.parentNode.insertBefore(caja, input);
+    caja.appendChild(input);
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'pw-ver';
+    b.textContent = 'Ver';
+    b.setAttribute('aria-label', 'Mostrar contraseña');
+    b.addEventListener('click', () => {
+      const oculto = input.type === 'password';
+      input.type = oculto ? 'text' : 'password';
+      b.textContent = oculto ? 'Ocultar' : 'Ver';
+      b.setAttribute('aria-label', oculto ? 'Ocultar contraseña' : 'Mostrar contraseña');
+    });
+    caja.appendChild(b);
+  });
+}
+document.addEventListener('DOMContentLoaded', activarVerContrasena);
+
+// Los números de las tarjetas de estadísticas suben desde 0 al aparecer.
+function animarNumero(el) {
+  const texto = el.textContent.trim();
+  const m = texto.match(/^(\d+(?:\.\d+)?)(%?)$/);
+  if (!m || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const meta = parseFloat(m[1]);
+  const decimales = (m[1].split('.')[1] || '').length;
+  const inicio = performance.now();
+  const duracion = 800;
+  (function paso(t) {
+    const p = Math.min(1, (t - inicio) / duracion);
+    const v = meta * (1 - Math.pow(1 - p, 3));
+    el.textContent = v.toFixed(decimales) + m[2];
+    if (p < 1) requestAnimationFrame(paso); else el.textContent = texto;
+  })(inicio);
+}
+new MutationObserver((cambios) => {
+  cambios.forEach((c) => c.addedNodes.forEach((n) => {
+    if (n.nodeType !== 1) return;
+    const lista = n.matches && n.matches('.stat .num') ? [n] : n.querySelectorAll ? n.querySelectorAll('.stat .num') : [];
+    lista.forEach(animarNumero);
+  }));
+}).observe(document.documentElement, { childList: true, subtree: true });
+
+// Los números de las tarjetas "suben" desde 0 hasta su valor (se omite si el sistema pide menos movimiento).
+function animarNumeros(raiz = document) {
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  raiz.querySelectorAll('.stat .num').forEach((el) => {
+    const texto = el.textContent.trim();
+    const m = texto.match(/^(-?\d+(?:\.\d+)?)(.*)$/);
+    if (!m) return;
+    const fin = parseFloat(m[1]);
+    const dec = (m[1].split('.')[1] || '').length;
+    const inicio = performance.now();
+    const paso = (ahora) => {
+      const p = Math.min(1, (ahora - inicio) / 700);
+      el.textContent = (fin * (1 - Math.pow(1 - p, 3))).toFixed(dec) + m[2];
+      if (p < 1) requestAnimationFrame(paso); else el.textContent = texto;
+    };
+    requestAnimationFrame(paso);
+  });
 }

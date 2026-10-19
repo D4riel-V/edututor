@@ -49,6 +49,18 @@ async function iniciarDatos(pool) {
     await pool.query('INSERT INTO materias (nombre, descripcion) VALUES ?', [MATERIAS]);
     console.log('Materias de ejemplo creadas.');
   }
+  await normalizarEspecialidades(pool);
 }
 
-module.exports = { iniciarDatos };
+// Tutores creados con la versión anterior (especialidad escrita a mano): si el texto coincide con una
+// materia del catálogo (sin importar mayúsculas), se normaliza y se agrega a sus materias. Lo demás no se toca.
+async function normalizarEspecialidades(pool) {
+  await pool.query(
+    `UPDATE tutores t JOIN materias m ON LOWER(TRIM(t.especialidad)) = LOWER(m.nombre)
+     SET t.especialidad = m.nombre WHERE t.especialidad <> m.nombre`);
+  await pool.query(
+    `INSERT IGNORE INTO tutor_materia (id_tutor, id_materia)
+     SELECT t.id_tutor, m.id_materia FROM tutores t JOIN materias m ON m.nombre = t.especialidad`);
+}
+
+module.exports = { iniciarDatos, normalizarEspecialidades };

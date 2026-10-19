@@ -15,20 +15,78 @@
   </header>
 
   <main class="contenedor">
-    <h1>Estadísticas</h1>
-    <p class="subtitulo">Resumen general del uso de la plataforma.</p>
-
-    <div id="stats" class="stats"></div>
-
-    <div class="grid-form" style="align-items:start">
-      <div class="tarjeta">
-        <h2>Solicitudes por estado</h2>
-        <div id="porEstado"></div>
+    <div class="fila-titulo">
+      <div>
+        <h1>Reportes y estadísticas</h1>
+        <p class="subtitulo" style="margin:0" id="periodo">Todo el historial</p>
       </div>
-      <div class="tarjeta">
-        <h2>Materias más solicitadas</h2>
-        <div id="topMaterias"></div>
+      <button class="btn btn-sec no-imprimir" type="button" onclick="window.print()">Imprimir / guardar PDF</button>
+    </div>
+
+    <div class="tarjeta no-imprimir">
+      <div class="filtros-fila">
+        <div class="campo"><label for="desde">Desde</label><input type="date" id="desde"></div>
+        <div class="campo"><label for="hasta">Hasta</label><input type="date" id="hasta"></div>
+        <button class="btn" id="btnAplicar" type="button">Aplicar</button>
+        <button class="btn btn-sec" data-rapido="7" type="button">Últimos 7 días</button>
+        <button class="btn btn-sec" data-rapido="30" type="button">Últimos 30 días</button>
+        <button class="btn btn-sec" data-rapido="0" type="button">Todo</button>
       </div>
+      <p class="ayuda">Las tutorías se filtran por su fecha; las solicitudes por el día en que se hicieron; los usuarios nuevos por su fecha de registro.</p>
+      <div class="botones">
+        <a class="btn btn-sec btn-chico" id="exTut" href="#">Descargar tutorías (Excel/CSV)</a>
+        <a class="btn btn-sec btn-chico" id="exSol" href="#">Descargar solicitudes (Excel/CSV)</a>
+        <a class="btn btn-sec btn-chico" id="exUsu" href="#">Descargar usuarios (Excel/CSV)</a>
+      </div>
+    </div>
+
+    <h2 class="seccion-titulo">Usuarios</h2>
+    <div id="kUsuarios" class="stats"></div>
+
+    <h2 class="seccion-titulo">Tutorías</h2>
+    <div id="kTutorias" class="stats"></div>
+
+    <h2 class="seccion-titulo">Solicitudes</h2>
+    <div id="kSolicitudes" class="stats"></div>
+
+    <div class="dos-col">
+      <div class="tarjeta"><h2>Solicitudes por estado</h2><div id="gEstado"></div></div>
+      <div class="tarjeta"><h2>Tutorías por estado y modalidad</h2><div id="gTutorias"></div></div>
+    </div>
+
+    <h2 class="seccion-titulo">Evolución por mes</h2>
+    <div class="tarjeta">
+      <div id="gMes" class="columnas"></div>
+      <div class="leyenda"><span><i style="background:var(--azul)"></i>Solicitudes</span><span><i style="background:var(--verde)"></i>Tutorías</span><span><i style="background:#d97706"></i>Usuarios nuevos</span></div>
+    </div>
+
+    <h2 class="seccion-titulo">Materias</h2>
+    <div class="tarjeta tabla-wrap" style="padding:0">
+      <table>
+        <thead><tr><th>Materia</th><th>Tutores</th><th>Tutorías</th><th>Solicitudes</th><th>Aceptadas</th><th>% aceptación</th></tr></thead>
+        <tbody id="tMaterias"></tbody>
+      </table>
+    </div>
+
+    <div class="dos-col" style="margin-top:20px">
+      <div class="tarjeta" style="padding:0">
+        <h2 style="padding:16px 16px 0">Tutores más activos</h2>
+        <div class="tabla-wrap"><table>
+          <thead><tr><th>Tutor</th><th>Tutorías</th><th>Aceptadas</th><th>Estudiantes</th></tr></thead>
+          <tbody id="tTutores"></tbody></table></div>
+      </div>
+      <div class="tarjeta" style="padding:0">
+        <h2 style="padding:16px 16px 0">Estudiantes más activos</h2>
+        <div class="tabla-wrap"><table>
+          <thead><tr><th>Estudiante</th><th>Grado</th><th>Solicitudes</th><th>Aceptadas</th></tr></thead>
+          <tbody id="tEstudiantes"></tbody></table></div>
+      </div>
+    </div>
+
+    <h2 class="seccion-titulo">¿Cuándo y quiénes?</h2>
+    <div class="dos-col">
+      <div class="tarjeta"><h2>Tutorías por día de la semana</h2><div id="gDia"></div></div>
+      <div class="tarjeta"><h2>Tutorías por horario</h2><div id="gFranja"></div><h2 style="margin-top:20px">Solicitudes por grado</h2><div id="gGrado"></div></div>
     </div>
   </main>
   <div id="toast" class="toast" role="status"></div>
@@ -37,29 +95,99 @@
   <script src="/js/ui.js"></script>
   <script>
     const $ = (id) => document.getElementById(id);
+    const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    const tarjetas = (arr) => arr.map(([n, et, sub]) => `<div class="stat"><div class="num">${n}</div><div class="et">${et}</div>${sub ? `<div class="sub">${sub}</div>` : ''}</div>`).join('');
 
-    function filasBarra(items, etiqueta, valor) {
-      const max = Math.max(1, ...items.map((i) => i[valor]));
+    function barras(items, clase = '') {
+      const max = Math.max(1, ...items.map((i) => i.valor));
       return items.length ? items.map((i) => `
-        <div style="margin-bottom:12px">
-          <div style="display:flex;justify-content:space-between;font-size:.9rem"><span>${esc(i[etiqueta])}</span><b>${i[valor]}</b></div>
-          <div class="barra"><div style="width:${(i[valor] / max) * 100}%"></div></div>
-        </div>`).join('') : '<p class="ayuda">Sin datos todavía.</p>';
+        <div class="barra-fila">
+          <div class="et"><span title="${esc(i.nombre)}">${esc(i.nombre)}</span><b>${i.valor}</b></div>
+          <div class="barra ${clase}"><div style="width:${(i.valor / max) * 100}%"></div></div>
+        </div>`).join('') : '<p class="ayuda">Sin datos en este periodo.</p>';
     }
 
-    (async () => {
-      if (!(await iniciarPagina(['Administrador']))) return;
-      try {
-        const { totales: t, solicitudesPorEstado, topMaterias } = await api('/api/estadisticas');
-        const tarjetas = [
-          [t.usuarios, 'Usuarios'], [t.estudiantes, 'Estudiantes'], [t.tutores, 'Tutores'],
-          [t.materias, 'Materias'], [t.tutorias_activas, 'Tutorías activas'], [t.tutorias, 'Tutorías (total)'], [t.solicitudes, 'Solicitudes']
-        ];
-        $('stats').innerHTML = tarjetas.map(([n, et]) => `<div class="stat"><div class="num">${n}</div><div class="et">${et}</div></div>`).join('');
-        $('porEstado').innerHTML = filasBarra(solicitudesPorEstado, 'estado', 'total');
-        $('topMaterias').innerHTML = filasBarra(topMaterias, 'nombre', 'solicitudes');
-      } catch (e) { mostrarError(e); }
-    })();
+    const pct = (a, b) => (b ? Math.round((a / b) * 100) + '%' : '0%');
+    const filasVacias = (n, cols) => `<tr><td colspan="${cols}" class="vacio">Sin datos en este periodo.</td></tr>`;
+
+    function pintar(d) {
+      const { usuarios: u, tutorias: t, solicitudes: s } = d.resumen;
+      const r = d.rango;
+      $('periodo').textContent = r.desde || r.hasta
+        ? `Periodo: ${r.desde ? fmtFecha(r.desde) : 'inicio'} al ${r.hasta ? fmtFecha(r.hasta) : 'hoy'}`
+        : 'Todo el historial';
+
+      $('kUsuarios').innerHTML = tarjetas([
+        [u.total, 'Usuarios registrados', `${u.desactivados} desactivado(s)`], [u.estudiantes, 'Estudiantes'], [u.tutores, 'Tutores'],
+        [u.administradores, 'Administradores'], [u.nuevos, 'Registros nuevos', r.desde || r.hasta ? 'en el periodo' : 'en total']
+      ]);
+      $('kTutorias').innerHTML = tarjetas([
+        [t.total, 'Tutorías', 'en el periodo'], [t.proximas, 'Próximas activas'], [t.realizadas, 'Ya realizadas', 'sin contar canceladas'],
+        [t.canceladas, 'Canceladas'], [t.ocupacion + '%', 'Ocupación de cupos', `${t.cuposOcupados} de ${t.cupos} cupos`],
+        [t.sinSolicitudes, 'Sin solicitudes', 'nadie las pidió']
+      ]);
+      $('kSolicitudes').innerHTML = tarjetas([
+        [s.total, 'Solicitudes'], [s.pendientes, 'Pendientes de responder'], [s.aceptadas, 'Aceptadas'], [s.rechazadas, 'Rechazadas'],
+        [s.tasaAceptacion + '%', 'Tasa de aceptación', 'aceptadas / (aceptadas + rechazadas)'],
+        [s.promedioPorTutoria, 'Solicitudes por tutoría', 'promedio'], [s.estudiantesActivos, 'Estudiantes que solicitaron']
+      ]);
+
+      $('gEstado').innerHTML = barras([
+        { nombre: 'Pendiente', valor: s.pendientes }, { nombre: 'Aceptada', valor: s.aceptadas },
+        { nombre: 'Rechazada', valor: s.rechazadas }, { nombre: 'Cancelada', valor: s.canceladas }]);
+      $('gTutorias').innerHTML = barras([
+        { nombre: 'Activas', valor: t.activas }, { nombre: 'Cerradas', valor: t.cerradas }, { nombre: 'Canceladas', valor: t.canceladas },
+        { nombre: 'Presenciales', valor: t.presenciales }, { nombre: 'Virtuales', valor: t.virtuales }], 'barra-verde');
+
+      const maxMes = Math.max(1, ...d.porMes.flatMap((m) => [m.solicitudes, m.tutorias, m.usuarios]));
+      const alto = (v) => Math.round((v / maxMes) * 125);
+      $('gMes').innerHTML = d.porMes.length ? d.porMes.map((m) => {
+        const [a, mm] = m.mes.split('-');
+        return `<div class="col-mes"><div class="pares">
+          <i style="height:${alto(m.solicitudes)}px" title="Solicitudes: ${m.solicitudes}"></i>
+          <i class="t" style="height:${alto(m.tutorias)}px" title="Tutorías: ${m.tutorias}"></i>
+          <i class="u" style="height:${alto(m.usuarios)}px" title="Usuarios nuevos: ${m.usuarios}"></i></div>
+          ${MESES[Number(mm) - 1]} ${a.slice(2)}<br><span title="Solicitudes / tutorías / usuarios">${m.solicitudes}·${m.tutorias}·${m.usuarios}</span></div>`;
+      }).join('') : '<p class="ayuda">Sin datos en este periodo.</p>';
+
+      $('tMaterias').innerHTML = d.porMateria.length ? d.porMateria.map((m) => `
+        <tr><td>${esc(m.nombre)}</td><td>${m.tutores}</td><td>${m.tutorias}</td><td>${m.solicitudes}</td><td>${m.aceptadas}</td><td>${pct(Number(m.aceptadas), Number(m.solicitudes))}</td></tr>`).join('') : filasVacias(0, 6);
+      $('tTutores').innerHTML = d.porTutor.length ? d.porTutor.map((x) => `
+        <tr><td>${esc(x.nombre)}</td><td>${x.tutorias}</td><td>${x.aceptadas}</td><td>${x.estudiantes}</td></tr>`).join('') : filasVacias(0, 4);
+      $('tEstudiantes').innerHTML = d.porEstudiante.length ? d.porEstudiante.map((x) => `
+        <tr><td>${esc(x.nombre)}</td><td>${esc(x.grado || '-')}</td><td>${x.solicitudes}</td><td>${x.aceptadas}</td></tr>`).join('') : filasVacias(0, 4);
+
+      animarNumeros(document.querySelector('main'));
+      $('gDia').innerHTML = barras(d.porDia.map((x) => ({ nombre: x.nombre, valor: x.tutorias })));
+      $('gFranja').innerHTML = barras([{ nombre: 'Mañana (antes de las 12:00)', valor: d.franja.manana }, { nombre: 'Tarde (12:00 en adelante)', valor: d.franja.tarde }], 'barra-ambar');
+      $('gGrado').innerHTML = barras(d.porGrado.map((x) => ({ nombre: x.nombre, valor: x.solicitudes })));
+    }
+
+    function consulta() {
+      const p = new URLSearchParams();
+      if ($('desde').value) p.set('desde', $('desde').value);
+      if ($('hasta').value) p.set('hasta', $('hasta').value);
+      return p.toString() ? '?' + p : '';
+    }
+
+    async function cargar() {
+      const q = consulta();
+      $('exTut').href = '/api/estadisticas/exportar/tutorias' + q;
+      $('exSol').href = '/api/estadisticas/exportar/solicitudes' + q;
+      $('exUsu').href = '/api/estadisticas/exportar/usuarios' + q;
+      try { pintar(await api('/api/estadisticas' + q)); } catch (e) { mostrarError(e); }
+    }
+
+    const iso = (d) => d.toLocaleDateString('en-CA');
+    document.querySelectorAll('[data-rapido]').forEach((b) => b.addEventListener('click', () => {
+      const dias = Number(b.dataset.rapido);
+      if (!dias) { $('desde').value = ''; $('hasta').value = ''; }
+      else { const h = new Date(); const d = new Date(); d.setDate(h.getDate() - dias); $('desde').value = iso(d); $('hasta').value = iso(h); }
+      cargar();
+    }));
+    $('btnAplicar').addEventListener('click', cargar);
+
+    (async () => { if (await iniciarPagina(['Administrador'])) cargar(); })();
   </script>
 </body>
 </html>

@@ -36,7 +36,7 @@
 
       <div id="bloqueTutor" style="display:none">
         <div class="grid-form">
-          <div class="campo"><label for="especialidad">Especialidad</label><input id="especialidad" maxlength="100"></div>
+          <div class="campo"><label for="especialidad">Especialidad</label><select id="especialidad"></select></div>
           <div class="campo"><label for="telefonoT">Teléfono</label><input id="telefonoT" maxlength="20"></div>
         </div>
         <div class="campo"><label for="descripcion">Sobre mí</label><textarea id="descripcion" placeholder="Cuéntales a los estudiantes tu experiencia y cómo ayudas."></textarea></div>
@@ -47,14 +47,31 @@
         </div>
       </div>
 
-      <hr style="border:0;border-top:1px solid var(--borde);margin:18px 0">
-      <div class="campo" style="max-width:340px">
-        <label for="nueva">Nueva contraseña (opcional)</label>
-        <input type="password" id="nueva" autocomplete="new-password" minlength="6">
-        <div class="ayuda">Déjala vacía si no quieres cambiarla.</div>
-      </div>
-
       <div class="botones"><button class="btn" type="submit">Guardar cambios</button></div>
+    </form>
+
+    <div id="bloquePeticion" class="tarjeta" style="display:none">
+      <h2>¿No encuentras tu materia?</h2>
+      <p class="ayuda" style="margin-top:-6px">Pídela aquí. Si el administrador la aprueba, se agrega a tus materias.</p>
+      <div class="filtros-fila">
+        <div class="campo" style="flex:1;min-width:220px"><label for="materiaNueva">Nombre de la materia</label><input id="materiaNueva" maxlength="80" placeholder="Ej: Robótica"></div>
+        <button class="btn" id="btnPedir" type="button">Enviar petición</button>
+      </div>
+      <div id="listaPeticiones" style="margin-top:12px"></div>
+    </div>
+
+    <form id="formClave" class="tarjeta" novalidate>
+      <h2>Seguridad</h2>
+      <p class="ayuda" style="margin-top:-6px">Para cambiar tu contraseña debes escribir primero la actual. Al cambiarla se cerrarán tus sesiones en otros dispositivos.</p>
+      <div class="grid-form">
+        <div class="campo"><label for="actual">Contraseña actual</label><input type="password" id="actual" autocomplete="current-password"></div>
+        <div class="campo"><label for="nueva">Nueva contraseña</label><input type="password" id="nueva" autocomplete="new-password" minlength="6"></div>
+        <div class="campo"><label for="confirmar">Confirmar nueva contraseña</label><input type="password" id="confirmar" autocomplete="new-password"></div>
+      </div>
+      <div class="botones">
+        <button class="btn" type="submit">Cambiar contraseña</button>
+        <button class="btn btn-sec" type="button" id="btnOtras">Cerrar mis sesiones en otros dispositivos</button>
+      </div>
     </form>
   </main>
   <div id="toast" class="toast" role="status"></div>
@@ -84,10 +101,17 @@
         }
         if (rol === 'Tutor') {
           $('bloqueTutor').style.display = '';
-          $('especialidad').value = perfil.especialidad || '';
+          $('bloquePeticion').style.display = '';
+          cargarPeticiones();
           $('telefonoT').value = perfil.telefono || '';
           $('descripcion').value = perfil.descripcion || '';
           const { materias } = await api('/api/materias');
+          // Lista desplegable con las materias existentes (si tenía un valor antiguo, se conserva como opción).
+          const actual = perfil.especialidad || '';
+          const nombres = materias.map((m) => m.nombre);
+          if (actual && !nombres.includes(actual)) nombres.unshift(actual);
+          $('especialidad').innerHTML = '<option value="">Sin especialidad</option>' + nombres.map((n) => `<option>${esc(n)}</option>`).join('');
+          $('especialidad').value = actual;
           const mias = new Set(perfil.materias.map((m) => m.id_materia));
           $('listaMaterias').innerHTML = materias.map((m) =>
             `<label><input type="checkbox" value="${m.id_materia}" ${mias.has(m.id_materia) ? 'checked' : ''}> ${esc(m.nombre)}</label>`).join('')
@@ -98,7 +122,7 @@
 
     $('formPerfil').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const cuerpo = { nombre: $('nombre').value, apellido: $('apellido').value, nuevaContrasena: $('nueva').value };
+      const cuerpo = { nombre: $('nombre').value, apellido: $('apellido').value };
       if (rol === 'Estudiante') Object.assign(cuerpo, { grado: $('grado').value, seccion: $('seccion').value, telefono: $('telefonoE').value });
       if (rol === 'Tutor') {
         Object.assign(cuerpo, {
@@ -108,9 +132,40 @@
       }
       try {
         const d = await api('/api/perfil', { method: 'PUT', body: cuerpo });
-        $('nueva').value = '';
         mensaje(d.mensaje);
       } catch (err) { mostrarError(err); }
+    });
+
+    async function cargarPeticiones() {
+      try {
+        const { peticiones } = await api('/api/peticiones-materia/mias');
+        $('listaPeticiones').innerHTML = peticiones.length ? peticiones.map((p) =>
+          `<p class="dato"><b style="min-width:0;margin-right:10px">${esc(p.nombre)}</b> ${badge(p.estado)}</p>`).join('') : '';
+      } catch (e) { mostrarError(e); }
+    }
+
+    $('btnPedir').addEventListener('click', async () => {
+      try {
+        const d = await api('/api/peticiones-materia', { method: 'POST', body: { nombre: $('materiaNueva').value } });
+        $('materiaNueva').value = '';
+        mensaje(d.mensaje);
+        cargarPeticiones();
+      } catch (err) { mostrarError(err); }
+    });
+
+    $('formClave').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if ($('nueva').value !== $('confirmar').value) return mensaje('Las contraseñas nuevas no coinciden.', 'error');
+      try {
+        const d = await api('/api/perfil/contrasena', { method: 'PUT', body: { contrasenaActual: $('actual').value, nuevaContrasena: $('nueva').value } });
+        ['actual', 'nueva', 'confirmar'].forEach((id) => { $(id).value = ''; });
+        mensaje(d.mensaje);
+      } catch (err) { mostrarError(err); }
+    });
+
+    $('btnOtras').addEventListener('click', async () => {
+      if (!confirm('¿Cerrar tu sesión en todos los demás dispositivos?')) return;
+      try { mensaje((await api('/api/auth/cerrar-otras', { method: 'POST' })).mensaje); } catch (err) { mostrarError(err); }
     });
   </script>
 </body>

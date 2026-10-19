@@ -42,7 +42,13 @@
         </div>
         <div id="datosTutor" class="campo" style="display:none">
           <label for="especialidad">Especialidad</label>
-          <input id="especialidad" maxlength="100" placeholder="Ej: Matemática y Física">
+          <select id="especialidad"><option value="">Cargando materias...</option></select>
+          <div class="ayuda">Elige la materia principal que impartes. Después podrás agregar más desde tu perfil.</div>
+          <div id="campoOtra" style="display:none;margin-top:10px">
+            <label for="materiaSolicitada">¿Qué materia necesitas?</label>
+            <input id="materiaSolicitada" maxlength="80" placeholder="Ej: Robótica">
+            <div class="ayuda">Tu cuenta se crea ahora. El administrador revisará tu petición y, si la aprueba, la materia se agrega a tu perfil.</div>
+          </div>
         </div>
 
         <button class="btn" type="submit" id="btnRegistrar">Registrarme</button>
@@ -56,12 +62,24 @@
   <script src="/js/ui.js"></script>
   <script>
     const error = document.getElementById('error');
+    const $esp = document.getElementById('especialidad');
     const rolActual = () => document.querySelector('input[name="rol"]:checked').value;
 
     document.querySelectorAll('input[name="rol"]').forEach((r) => r.addEventListener('change', () => {
       document.getElementById('datosEstudiante').style.display = rolActual() === 'Estudiante' ? '' : 'none';
       document.getElementById('datosTutor').style.display = rolActual() === 'Tutor' ? '' : 'none';
     }));
+
+    // Materias disponibles para elegir la especialidad.
+    api('/api/materias/publicas', { sinRedirigir: true }).then((d) => {
+      $esp.innerHTML = '<option value="">Selecciona una materia</option>' + d.materias.map((m) => `<option>${esc(m.nombre)}</option>`).join('') + '<option value="__otra__">Mi materia no está en la lista</option>';
+    }).catch(() => { $esp.innerHTML = '<option value="">No se pudieron cargar las materias</option>'; });
+
+    $esp.addEventListener('change', () => {
+      const otra = $esp.value === '__otra__';
+      document.getElementById('campoOtra').style.display = otra ? '' : 'none';
+      if (otra) document.getElementById('materiaSolicitada').focus();
+    });
 
     function mostrar(texto) { error.textContent = texto; error.classList.add('visible'); }
 
@@ -70,20 +88,24 @@
       error.classList.remove('visible');
       const v = (id) => document.getElementById(id).value;
       if (v('contrasena') !== v('confirmar')) return mostrar('Las contraseñas no coinciden.');
+      const otra = rolActual() === 'Tutor' && v('especialidad') === '__otra__';
+      if (rolActual() === 'Tutor' && !v('especialidad')) return mostrar('Elige tu especialidad.');
+      if (otra && !v('materiaSolicitada').trim()) return mostrar('Escribe el nombre de la materia que necesitas.');
 
       const btn = document.getElementById('btnRegistrar');
       btn.disabled = true;
       try {
-        await api('/api/auth/registro', {
+        const d = await api('/api/auth/registro', {
           method: 'POST',
           sinRedirigir: true,
           body: {
             rol: rolActual(), nombre: v('nombre'), apellido: v('apellido'), correo: v('correo'),
-            contrasena: v('contrasena'), grado: v('grado'), seccion: v('seccion'), especialidad: v('especialidad')
+            contrasena: v('contrasena'), grado: v('grado'), seccion: v('seccion'), especialidad: rolActual() === 'Tutor' && !otra ? v('especialidad') : '',
+            materiaSolicitada: otra ? v('materiaSolicitada') : ''
           }
         });
-        alert('Cuenta creada correctamente. Ahora puedes iniciar sesión.');
-        location.href = '/index.html';
+        // Ya quedó con la sesión iniciada: va directo a su panel.
+        location.href = INICIO[d.usuario.rol];
       } catch (err) {
         mostrar(err.message);
         btn.disabled = false;

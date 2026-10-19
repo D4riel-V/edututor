@@ -4,14 +4,21 @@ const db = require('../config/db');
 const { ApiError, ah } = require('../utils/errores');
 const { validarUsuarioNuevo, crearUsuario, datosDeSesion } = require('../utils/usuarios');
 const limite = require('../utils/limite');
+const { cerrarOtrasSesiones } = require('../utils/sesiones');
 
 const router = express.Router();
 
 // Registro público: solo estudiantes y tutores.
 router.post('/registro', ah(async (req, res) => {
   const datos = validarUsuarioNuevo(req.body, ['Estudiante', 'Tutor']);
-  await crearUsuario(db, datos);
-  res.status(201).json({ mensaje: 'Cuenta creada correctamente. Ya puedes iniciar sesión.' });
+  if (datos.rol === 'Tutor' && !datos.especialidad && !datos.materiaSolicitada) throw new ApiError(400, 'Elige tu especialidad o escribe la materia que necesitas.');
+  if (datos.especialidad) datos.materiaSolicitada = '';
+  const id = await crearUsuario(db, datos);
+  // Entra directamente al sistema, sin pedir otro inicio de sesión.
+  const usuario = await datosDeSesion(db, { id_usuario: id, nombre: datos.nombre, apellido: datos.apellido, correo: datos.correo, rol: datos.rol });
+  await new Promise((ok, fallo) => req.session.regenerate((e) => (e ? fallo(e) : ok())));
+  req.session.usuario = usuario;
+  res.status(201).json({ usuario, mensaje: 'Cuenta creada correctamente.' });
 }));
 
 router.post('/login', ah(async (req, res) => {
@@ -44,6 +51,12 @@ router.post('/logout', (req, res) => {
     res.clearCookie('connect.sid');
     res.json({ mensaje: 'Sesión cerrada.' });
   });
+});
+
+// Cierra la sesión de este usuario en todos los demás dispositivos.
+router.post('/cerrar-otras', (req, res, next) => {
+  if (!req.session.usuario) return res.status(401).json({ error: 'Debes iniciar sesión.' });
+  cerrarOtrasSesiones(req).then((n) => res.json({ mensaje: n ? `Se cerraron ${n} sesión(es) en otros dispositivos.` : 'No había sesiones abiertas en otros dispositivos.' })).catch(next);
 });
 
 router.get('/me', (req, res) => {

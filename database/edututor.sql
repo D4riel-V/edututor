@@ -93,6 +93,16 @@ CREATE TABLE IF NOT EXISTS solicitudes (
   FOREIGN KEY (id_tutoria) REFERENCES tutorias(id_tutoria) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS peticiones_materia (
+  id_peticion INT AUTO_INCREMENT PRIMARY KEY,
+  id_tutor INT NOT NULL,
+  nombre VARCHAR(80) NOT NULL,
+  estado ENUM('Pendiente','Aprobada','Rechazada') NOT NULL DEFAULT 'Pendiente',
+  fecha_peticion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  fecha_resolucion DATETIME NULL,
+  FOREIGN KEY (id_tutor) REFERENCES tutores(id_tutor) ON DELETE CASCADE
+);
+
 INSERT IGNORE INTO roles (nombre) VALUES ('Administrador'), ('Tutor'), ('Estudiante');
 
 -- Nota: la cuenta de administrador y las materias de ejemplo las crea

@@ -14,13 +14,15 @@ function validarUsuarioNuevo(d, rolesPermitidos) {
     grado: String(d.grado || '').trim(),
     seccion: String(d.seccion || '').trim(),
     telefono: String(d.telefono || '').trim(),
-    especialidad: String(d.especialidad || '').trim()
+    especialidad: String(d.especialidad || '').trim(),
+    materiaSolicitada: String(d.materiaSolicitada || '').trim()
   };
   if (!limpio.nombre || !limpio.apellido) throw new ApiError(400, 'El nombre y el apellido son obligatorios.');
   if (limpio.nombre.length > 60 || limpio.apellido.length > 60) throw new ApiError(400, 'El nombre o el apellido es demasiado largo.');
   if (!EMAIL.test(limpio.correo)) throw new ApiError(400, 'Escribe un correo válido.');
   if (limpio.correo.length > 100) throw new ApiError(400, 'El correo es demasiado largo.');
   if (limpio.contrasena.length < 6) throw new ApiError(400, 'La contraseña debe tener al menos 6 caracteres.');
+  if (limpio.materiaSolicitada.length > 80) throw new ApiError(400, 'El nombre de la materia es demasiado largo (máximo 80 caracteres).');
   if (!rolesPermitidos.includes(limpio.rol)) throw new ApiError(400, 'El tipo de usuario no es válido.');
   return limpio;
 }
@@ -41,8 +43,20 @@ async function crearUsuario(pool, d) {
       await conn.query('INSERT INTO estudiantes (id_usuario, grado, seccion, telefono) VALUES (?, ?, ?, ?)',
         [r.insertId, d.grado || null, d.seccion || null, d.telefono || null]);
     } else if (d.rol === 'Tutor') {
-      await conn.query('INSERT INTO tutores (id_usuario, especialidad, telefono) VALUES (?, ?, ?)',
-        [r.insertId, d.especialidad || null, d.telefono || null]);
+      let materia = null;
+      if (d.especialidad) {
+        const [m] = await conn.query('SELECT id_materia, nombre FROM materias WHERE nombre = ?', [d.especialidad]);
+        if (!m.length) throw new ApiError(400, 'Elige una especialidad de la lista.');
+        materia = m[0];
+      }
+      const [t] = await conn.query('INSERT INTO tutores (id_usuario, especialidad, telefono) VALUES (?, ?, ?)',
+        [r.insertId, materia ? materia.nombre : null, d.telefono || null]);
+      // La especialidad elegida también queda como materia que puede impartir.
+      if (materia) await conn.query('INSERT INTO tutor_materia (id_tutor, id_materia) VALUES (?, ?)', [t.insertId, materia.id_materia]);
+      // Si su materia no estaba en la lista, queda como petición para que el administrador la revise.
+      if (!materia && d.materiaSolicitada) {
+        await conn.query('INSERT INTO peticiones_materia (id_tutor, nombre) VALUES (?, ?)', [t.insertId, d.materiaSolicitada]);
+      }
     }
     await conn.commit();
     return r.insertId;

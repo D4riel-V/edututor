@@ -17,7 +17,7 @@ Tiempo estimado: 30 a 45 minutos la primera vez.
 
 1. Entra a **console.aiven.io** y crea una cuenta (según su página, el plan gratis no pide tarjeta).
 2. Presiona **Create service** y elige **MySQL**.
-3. Elige el plan **Free** y una región. Ponle un nombre, por ejemplo `edututor-db`, y presiona **Create**.
+3. En **Service tier** elige el plan gratuito (Free). En el plan gratis no se puede elegir la nube ni la región; omite ese campo. Ponle un nombre en **Service details**, por ejemplo `edututor-db`, y presiona **Create service**.
 4. Espera unos minutos hasta que el estado sea **Running**.
 5. En la pantalla del servicio (Overview) copia y guarda en un bloc de notas estos 5 datos:
    - **Host** (algo como `edututor-db-xxxx.aivencloud.com`)
@@ -99,3 +99,11 @@ Con MySQL Workbench crea una conexión nueva con el Host, Port, User y Password 
 - Nunca subas a GitHub un archivo con contraseñas. El archivo `.env` ya está excluido en `.gitignore`.
 - Cambia la contraseña del administrador si alguien más la llega a ver.
 - La conexión a la base está cifrada. Por simplicidad no se verifica el certificado del servidor; para un uso serio se debería agregar.
+
+## Cómo actualizar la página después de publicarla
+
+1. Cambia los archivos en tu computadora y pruébalos con `npm start`.
+2. En GitHub abre tu repositorio y presiona **Add file > Upload files**. Arrastra los archivos cambiados (mismo nombre y misma carpeta) y presiona **Commit changes**.
+3. Render detecta el cambio y publica la nueva versión solo (tarda 2 a 5 minutos). Lo puedes ver en la pestaña **Events** o **Logs**.
+
+Los datos de la base (usuarios, tutorías) no se borran al actualizar el código.

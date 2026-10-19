@@ -87,6 +87,71 @@ router.get('/mias', requiereRol('Tutor'), ah(async (req, res) => {
   res.json({ tutorias: filas });
 }));
 
+// ---------- Administrador: ver todas las tutorías ----------
+router.get('/admin', requiereRol('Administrador'), ah(async (req, res) => {
+  const { q, materia, estado, modalidad, desde, hasta } = req.query;
+  const params = [];
+  let where = '1=1';
+  if (materia) { where += ' AND t.id_materia = ?'; params.push(Number(materia)); }
+  if (['Activa', 'Cerrada', 'Cancelada'].includes(estado)) { where += ' AND t.estado = ?'; params.push(estado); }
+  if (['Presencial', 'Virtual'].includes(modalidad)) { where += ' AND t.modalidad = ?'; params.push(modalidad); }
+  if (FECHA.test(desde || '')) { where += ' AND t.fecha >= ?'; params.push(desde); }
+  if (FECHA.test(hasta || '')) { where += ' AND t.fecha <= ?'; params.push(hasta); }
+  if (q) {
+    where += " AND (t.titulo LIKE ? OR m.nombre LIKE ? OR CONCAT(u.nombre, ' ', u.apellido) LIKE ?)";
+    params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+  }
+  const [filas] = await db.query(
+    `SELECT t.id_tutoria, t.titulo, t.modalidad, t.cupo, t.fecha, t.hora_inicio, t.hora_fin, t.estado,
+            m.nombre AS materia, CONCAT(u.nombre, ' ', u.apellido) AS tutor,
+            (SELECT COUNT(*) FROM solicitudes s WHERE s.id_tutoria = t.id_tutoria AND s.estado = 'Aceptada') AS aceptadas,
+            (SELECT COUNT(*) FROM solicitudes s WHERE s.id_tutoria = t.id_tutoria AND s.estado = 'Pendiente') AS pendientes,
+            (SELECT COUNT(*) FROM solicitudes s WHERE s.id_tutoria = t.id_tutoria AND s.estado = 'Rechazada') AS rechazadas,
+            (SELECT COUNT(*) FROM solicitudes s WHERE s.id_tutoria = t.id_tutoria AND s.estado = 'Cancelada') AS canceladas
+     FROM tutorias t
+     JOIN materias m ON m.id_materia = t.id_materia
+     JOIN tutores tu ON tu.id_tutor = t.id_tutor
+     JOIN usuarios u ON u.id_usuario = tu.id_usuario
+     WHERE ${where}
+     ORDER BY t.fecha DESC, t.hora_inicio DESC
+     LIMIT 500`,
+    params
+  );
+  res.json({ tutorias: filas });
+}));
+
+router.get('/admin/:id', requiereRol('Administrador'), ah(async (req, res) => {
+  const [filas] = await db.query(
+    `SELECT t.id_tutoria, t.titulo, t.descripcion, t.modalidad, t.cupo, t.fecha, t.hora_inicio, t.hora_fin, t.estado,
+            m.nombre AS materia, CONCAT(u.nombre, ' ', u.apellido) AS tutor, u.correo AS tutor_correo
+     FROM tutorias t
+     JOIN materias m ON m.id_materia = t.id_materia
+     JOIN tutores tu ON tu.id_tutor = t.id_tutor
+     JOIN usuarios u ON u.id_usuario = tu.id_usuario
+     WHERE t.id_tutoria = ?`, [req.params.id]);
+  if (!filas.length) throw new ApiError(404, 'La tutoría no existe.');
+  const [solicitudes] = await db.query(
+    `SELECT s.id_solicitud, s.estado, s.comentario, s.fecha_solicitud,
+            CONCAT(u.nombre, ' ', u.apellido) AS estudiante, u.correo, e.grado, e.seccion
+     FROM solicitudes s
+     JOIN estudiantes e ON e.id_estudiante = s.id_estudiante
+     JOIN usuarios u ON u.id_usuario = e.id_usuario
+     WHERE s.id_tutoria = ? ORDER BY s.fecha_solicitud`, [req.params.id]);
+  res.json({ tutoria: filas[0], solicitudes });
+}));
+
+// Cambia el estado de cualquier tutoría. Al cancelar, también se cancelan las solicitudes abiertas.
+router.put('/admin/:id/estado', requiereRol('Administrador'), ah(async (req, res) => {
+  const estado = String(req.body.estado || '');
+  if (!['Activa', 'Cerrada', 'Cancelada'].includes(estado)) throw new ApiError(400, 'El estado no es válido.');
+  const [r] = await db.query('UPDATE tutorias SET estado = ? WHERE id_tutoria = ?', [estado, req.params.id]);
+  if (!r.affectedRows) throw new ApiError(404, 'La tutoría no existe.');
+  if (estado === 'Cancelada') {
+    await db.query("UPDATE solicitudes SET estado = 'Cancelada' WHERE id_tutoria = ? AND estado IN ('Pendiente','Aceptada')", [req.params.id]);
+  }
+  res.json({ mensaje: `Tutoría marcada como ${estado.toLowerCase()}.` });
+}));
+
 // ---------- Estudiante: detalle de una tutoría y de su tutor ----------
 router.get('/:id', requiereRol('Estudiante'), ah(async (req, res) => {
   const [filas] = await db.query(

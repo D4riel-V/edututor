@@ -3,10 +3,11 @@ const VENTANA_MS = 15 * 60 * 1000;
 const MAX_INTENTOS = 8;
 const intentos = new Map();
 
-const clave = (req) => `${req.ip}|${String(req.body.correo || '').trim().toLowerCase()}`;
+// `extra` permite separar contadores (por ejemplo, el cambio de contraseña de un usuario).
+const clave = (req, extra) => extra ? `${req.ip}|${extra}` : `${req.ip}|${String(req.body.correo || '').trim().toLowerCase()}`;
 
-function bloqueado(req) {
-  const k = clave(req);
+function bloqueado(req, extra) {
+  const k = clave(req, extra);
   const r = intentos.get(k);
   if (!r) return false;
   if (Date.now() - r.inicio > VENTANA_MS) {
@@ -16,15 +17,15 @@ function bloqueado(req) {
   return r.n >= MAX_INTENTOS;
 }
 
-function registrarFallo(req) {
-  const k = clave(req);
+function registrarFallo(req, extra) {
+  const k = clave(req, extra);
   const r = intentos.get(k);
   if (!r || Date.now() - r.inicio > VENTANA_MS) intentos.set(k, { n: 1, inicio: Date.now() });
   else r.n += 1;
 }
 
-function limpiar(req) {
-  intentos.delete(clave(req));
+function limpiar(req, extra) {
+  intentos.delete(clave(req, extra));
 }
 
 // Limpieza periódica para no acumular memoria.

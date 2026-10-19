@@ -18,6 +18,14 @@
     <h1>Materias</h1>
     <p class="subtitulo">Catálogo de materias disponibles para las tutorías.</p>
 
+    <div id="cajaPeticiones" class="tarjeta" style="display:none">
+      <h2>Peticiones de tutores <span id="contador" class="badge b-Pendiente"></span></h2>
+      <div class="tabla-wrap"><table>
+        <thead><tr><th>Materia pedida</th><th>Tutor</th><th>Fecha</th><th>Estado</th><th></th></tr></thead>
+        <tbody id="cuerpoPeticiones"></tbody>
+      </table></div>
+    </div>
+
     <form id="formulario" class="tarjeta" novalidate>
       <h2 id="formTitulo">Nueva materia</h2>
       <div class="grid-form">
@@ -66,6 +74,40 @@
         : '<tr><td colspan="3" class="vacio">No hay materias registradas.</td></tr>';
     }
 
+    async function cargarPeticiones() {
+      try {
+        const { peticiones, pendientes } = await api('/api/peticiones-materia');
+        $('cajaPeticiones').style.display = peticiones.length ? '' : 'none';
+        $('contador').textContent = pendientes ? pendientes + ' pendiente(s)' : '';
+        $('contador').style.display = pendientes ? '' : 'none';
+        $('cuerpoPeticiones').innerHTML = peticiones.map((p) => `
+          <tr>
+            <td><b>${esc(p.nombre)}</b></td><td>${esc(p.tutor)}<div class="ayuda">${esc(p.correo)}</div></td>
+            <td>${fmtFecha(p.fecha_peticion)}</td><td>${badge(p.estado)}</td>
+            <td>${p.estado === 'Pendiente' ? `<div class="acciones">
+              <button class="btn btn-ok btn-chico" data-aprobar="${p.id_peticion}" data-nombre="${esc(p.nombre)}">Aprobar</button>
+              <button class="btn btn-peligro btn-chico" data-rechazar="${p.id_peticion}">Rechazar</button></div>` : ''}</td>
+          </tr>`).join('');
+      } catch (e) { mostrarError(e); }
+    }
+
+    $('cuerpoPeticiones').addEventListener('click', async (e) => {
+      const ap = e.target.closest('[data-aprobar]');
+      const re = e.target.closest('[data-rechazar]');
+      try {
+        if (ap) {
+          const nombre = prompt('Se creará esta materia. Puedes corregir el nombre antes de aprobar:', ap.dataset.nombre);
+          if (nombre === null) return;
+          mensaje((await api(`/api/peticiones-materia/${ap.dataset.aprobar}/aprobar`, { method: 'PUT', body: { nombre } })).mensaje);
+          cargar(); cargarPeticiones();
+        }
+        if (re && confirm('¿Rechazar esta petición?')) {
+          mensaje((await api(`/api/peticiones-materia/${re.dataset.rechazar}/rechazar`, { method: 'PUT' })).mensaje);
+          cargarPeticiones();
+        }
+      } catch (err) { mostrarError(err); }
+    });
+
     async function cargar() {
       try { lista = (await api('/api/materias')).materias; pintar(); } catch (e) { mostrarError(e); }
     }
@@ -101,7 +143,7 @@
       }
     });
 
-    (async () => { if (await iniciarPagina(['Administrador'])) cargar(); })();
+    (async () => { if (await iniciarPagina(['Administrador'])) { cargar(); cargarPeticiones(); } })();
   </script>
 </body>
 </html>

@@ -14,6 +14,12 @@ function validar(b) {
   return { nombre, descripcion: descripcion || null };
 }
 
+// Lista pública (solo id y nombre): la usa la pantalla de registro para elegir la especialidad.
+router.get('/publicas', ah(async (req, res) => {
+  const [filas] = await db.query('SELECT id_materia, nombre FROM materias ORDER BY nombre');
+  res.json({ materias: filas });
+}));
+
 router.get('/', requiereLogin, ah(async (req, res) => {
   const [filas] = await db.query('SELECT id_materia, nombre, descripcion FROM materias ORDER BY nombre');
   res.json({ materias: filas });

@@ -34,13 +34,15 @@ app.use(session({
   secret: secreto,
   resave: false,
   saveUninitialized: false,
-  cookie: { httpOnly: true, sameSite: 'lax', secure: 'auto', maxAge: 1000 * 60 * 60 * 4 } // 4 horas
+  rolling: true, // el tiempo se renueva con cada uso: se cierra sola tras 60 minutos sin actividad
+  cookie: { httpOnly: true, sameSite: 'lax', secure: 'auto', maxAge: 1000 * 60 * 60 }
 }));
 
 // ---- API ----
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/perfil', require('./routes/perfil'));
 app.use('/api/materias', require('./routes/materias'));
+app.use('/api/peticiones-materia', require('./routes/peticiones'));
 app.use('/api/usuarios', require('./routes/usuarios'));
 app.use('/api/disponibilidades', require('./routes/disponibilidades'));
 app.use('/api/tutorias', require('./routes/tutorias'));

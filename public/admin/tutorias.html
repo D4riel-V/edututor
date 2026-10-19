@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EduTutor - Tutorías</title>
+  <link rel="stylesheet" href="/css/estilos.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="marca" href="/">EduTutor</a>
+    <button id="menuBtn" class="menu-btn" aria-label="Menú">☰</button>
+    <nav id="nav" class="nav"></nav>
+  </header>
+
+  <main class="contenedor">
+    <h1>Tutorías</h1>
+    <p class="subtitulo">Todas las tutorías de la plataforma, con sus cupos y solicitudes.</p>
+
+    <div class="tarjeta">
+      <div class="grid-form">
+        <div class="campo"><label for="fq">Buscar</label><input id="fq" placeholder="Título, materia o tutor"></div>
+        <div class="campo"><label for="fmateria">Materia</label><select id="fmateria"><option value="">Todas</option></select></div>
+        <div class="campo"><label for="festado">Estado</label>
+          <select id="festado"><option value="">Todos</option><option>Activa</option><option>Cerrada</option><option>Cancelada</option></select></div>
+        <div class="campo"><label for="fmodalidad">Modalidad</label>
+          <select id="fmodalidad"><option value="">Todas</option><option>Presencial</option><option>Virtual</option></select></div>
+        <div class="campo"><label for="fdesde">Desde</label><input type="date" id="fdesde"></div>
+        <div class="campo"><label for="fhasta">Hasta</label><input type="date" id="fhasta"></div>
+      </div>
+      <div class="botones"><button class="btn btn-sec btn-chico" id="btnLimpiar" type="button">Limpiar filtros</button></div>
+    </div>
+
+    <p id="conteo" class="notas-tabla"></p>
+    <div class="tarjeta tabla-wrap" style="padding:0">
+      <table>
+        <thead><tr><th>Fecha</th><th>Horario</th><th>Tutoría</th><th>Materia</th><th>Tutor</th><th>Modalidad</th><th>Cupos</th><th>Solicitudes</th><th>Estado</th><th></th></tr></thead>
+        <tbody id="cuerpo"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <dialog id="detalle">
+    <h2 id="dTitulo"></h2>
+    <div id="dDatos"></div>
+    <h3 style="margin:14px 0 6px;font-size:1rem">Estudiantes</h3>
+    <div class="tabla-wrap"><table><thead><tr><th>Estudiante</th><th>Grado</th><th>Estado</th></tr></thead><tbody id="dSolicitudes"></tbody></table></div>
+    <div class="botones" style="margin-top:16px">
+      <button class="btn btn-peligro" id="btnCancelarTut" type="button">Cancelar tutoría</button>
+      <button class="btn btn-sec" id="btnCerrarTut" type="button">Cerrar inscripciones</button>
+      <button class="btn btn-ok" id="btnActivarTut" type="button">Reactivar</button>
+      <button class="btn btn-sec" id="btnX" type="button">Cerrar ventana</button>
+    </div>
+  </dialog>
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let lista = [];
+    let abierta = null;
+    let temporizador;
+
+    function pintar() {
+      $('conteo').textContent = lista.length ? `${lista.length} tutoría(s)` + (lista.length === 500 ? ' (se muestran las primeras 500)' : '') : '';
+      $('cuerpo').innerHTML = lista.length ? lista.map((t) => `
+        <tr>
+          <td>${fmtFecha(t.fecha)}</td>
+          <td>${fmtHora(t.hora_inicio)} - ${fmtHora(t.hora_fin)}</td>
+          <td>${esc(t.titulo)}</td>
+          <td>${esc(t.materia)}</td>
+          <td>${esc(t.tutor)}</td>
+          <td>${esc(t.modalidad)}</td>
+          <td>${t.aceptadas} / ${t.cupo}</td>
+          <td>${t.pendientes} pend. · ${t.rechazadas} rech.</td>
+          <td>${badge(t.estado)}</td>
+          <td><button class="btn btn-sec btn-chico" data-ver="${t.id_tutoria}">Ver</button></td>
+        </tr>`).join('') : '<tr><td colspan="10" class="vacio">No se encontraron tutorías.</td></tr>';
+    }
+
+    async function cargar() {
+      const p = new URLSearchParams();
+      [['q', 'fq'], ['materia', 'fmateria'], ['estado', 'festado'], ['modalidad', 'fmodalidad'], ['desde', 'fdesde'], ['hasta', 'fhasta']]
+        .forEach(([k, id]) => { if ($(id).value.trim()) p.set(k, $(id).value.trim()); });
+      try { lista = (await api('/api/tutorias/admin?' + p)).tutorias; pintar(); } catch (e) { mostrarError(e); }
+    }
+
+    async function abrir(id) {
+      try {
+        const { tutoria: t, solicitudes } = await api('/api/tutorias/admin/' + id);
+        abierta = t;
+        $('dTitulo').textContent = t.titulo;
+        $('dDatos').innerHTML = `
+          <p class="dato"><b>Materia</b> ${esc(t.materia)}</p>
+          <p class="dato"><b>Tutor</b> ${esc(t.tutor)} (${esc(t.tutor_correo)})</p>
+          <p class="dato"><b>Fecha</b> ${fmtFecha(t.fecha)}, ${fmtHora(t.hora_inicio)} - ${fmtHora(t.hora_fin)}</p>
+          <p class="dato"><b>Modalidad</b> ${esc(t.modalidad)}</p>
+          <p class="dato"><b>Cupo</b> ${t.cupo}</p>
+          <p class="dato"><b>Estado</b> ${badge(t.estado)}</p>
+          <p class="dato"><b>Descripción</b> ${esc(t.descripcion || 'Sin descripción')}</p>`;
+        $('dSolicitudes').innerHTML = solicitudes.length ? solicitudes.map((s) => `
+          <tr><td>${esc(s.estudiante)}<div class="ayuda">${esc(s.correo)}</div></td>
+          <td>${esc([s.grado, s.seccion].filter(Boolean).join(' '))}</td><td>${badge(s.estado)}</td></tr>`).join('')
+          : '<tr><td colspan="3" class="vacio">Nadie ha solicitado esta tutoría.</td></tr>';
+        $('btnCancelarTut').style.display = t.estado !== 'Cancelada' ? '' : 'none';
+        $('btnCerrarTut').style.display = t.estado === 'Activa' ? '' : 'none';
+        $('btnActivarTut').style.display = t.estado !== 'Activa' ? '' : 'none';
+        $('detalle').showModal();
+      } catch (e) { mostrarError(e); }
+    }
+
+    async function cambiarEstado(estado, aviso) {
+      if (aviso && !confirm(aviso)) return;
+      try {
+        mensaje((await api(`/api/tutorias/admin/${abierta.id_tutoria}/estado`, { method: 'PUT', body: { estado } })).mensaje);
+        $('detalle').close();
+        cargar();
+      } catch (e) { mostrarError(e); }
+    }
+
+    $('cuerpo').addEventListener('click', (e) => { const b = e.target.closest('[data-ver]'); if (b) abrir(b.dataset.ver); });
+    $('btnX').addEventListener('click', () => $('detalle').close());
+    $('btnCancelarTut').addEventListener('click', () => cambiarEstado('Cancelada', 'Se cancelará la tutoría y también sus solicitudes pendientes y aceptadas. ¿Continuar?'));
+    $('btnCerrarTut').addEventListener('click', () => cambiarEstado('Cerrada'));
+    $('btnActivarTut').addEventListener('click', () => cambiarEstado('Activa', abierta && abierta.estado === 'Cancelada' ? 'Las solicitudes canceladas no se restauran. ¿Reactivar la tutoría?' : null));
+    ['fmateria', 'festado', 'fmodalidad', 'fdesde', 'fhasta'].forEach((id) => $(id).addEventListener('change', cargar));
+    $('fq').addEventListener('input', () => { clearTimeout(temporizador); temporizador = setTimeout(cargar, 300); });
+    $('btnLimpiar').addEventListener('click', () => { ['fq', 'fmateria', 'festado', 'fmodalidad', 'fdesde', 'fhasta'].forEach((id) => { $(id).value = ''; }); cargar(); });
+
+    (async () => {
+      if (!(await iniciarPagina(['Administrador']))) return;
+      try {
+        const { materias } = await api('/api/materias');
+        $('fmateria').innerHTML += materias.map((m) => `<option value="${m.id_materia}">${esc(m.nombre)}</option>`).join('');
+      } catch (e) { mostrarError(e); }
+      cargar();
+    })();
+  </script>
+</body>
+</html>

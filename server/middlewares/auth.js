@@ -1,4 +1,4 @@
-// Protección de rutas y funciones según sesión y rol (RNF05 y RNF11).
+// Protección de rutas y funciones según sesión y rol.
 
 function requiereLogin(req, res, next) {
   if (!req.session.usuario) return res.status(401).json({ error: 'Debes iniciar sesión.' });

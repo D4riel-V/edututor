@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EduTutor - Disponibilidad</title>
+  <link rel="stylesheet" href="/css/estilos.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="marca" href="/">EduTutor</a>
+    <button id="menuBtn" class="menu-btn" aria-label="Menú">☰</button>
+    <nav id="nav" class="nav"></nav>
+  </header>
+
+  <main class="contenedor">
+    <h1>Mi disponibilidad</h1>
+    <p class="subtitulo">Indica los días y horas en los que puedes dar tutorías.</p>
+
+    <form id="formulario" class="tarjeta" novalidate>
+      <h2 id="formTitulo">Agregar horario</h2>
+      <div class="grid-form">
+        <div class="campo">
+          <label for="dia">Día</label>
+          <select id="dia">
+            <option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option>
+            <option>Viernes</option><option>Sábado</option><option>Domingo</option>
+          </select>
+        </div>
+        <div class="campo"><label for="inicio">Hora de inicio</label><input type="time" id="inicio" required></div>
+        <div class="campo"><label for="fin">Hora de fin</label><input type="time" id="fin" required></div>
+      </div>
+      <div class="botones">
+        <button class="btn" type="submit" id="btnGuardar">Agregar</button>
+        <button class="btn btn-sec" type="button" id="btnCancelar" style="display:none">Cancelar edición</button>
+      </div>
+    </form>
+
+    <div class="tarjeta tabla-wrap" style="padding:0">
+      <table>
+        <thead><tr><th>Día</th><th>Desde</th><th>Hasta</th><th></th></tr></thead>
+        <tbody id="cuerpo"></tbody>
+      </table>
+    </div>
+  </main>
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let lista = [];
+    let editando = null;
+
+    function reiniciar() {
+      editando = null;
+      $('formulario').reset();
+      $('formTitulo').textContent = 'Agregar horario';
+      $('btnGuardar').textContent = 'Agregar';
+      $('btnCancelar').style.display = 'none';
+    }
+
+    function pintar() {
+      $('cuerpo').innerHTML = lista.length ? lista.map((d) => `
+        <tr>
+          <td>${esc(d.dia_semana)}</td><td>${fmtHora(d.hora_inicio)}</td><td>${fmtHora(d.hora_fin)}</td>
+          <td><div class="acciones">
+            <button class="btn btn-sec btn-chico" data-editar="${d.id_disponibilidad}">Editar</button>
+            <button class="btn btn-peligro btn-chico" data-eliminar="${d.id_disponibilidad}">Eliminar</button>
+          </div></td>
+        </tr>`).join('')
+        : '<tr><td colspan="4" class="vacio">Aún no has registrado horarios.</td></tr>';
+    }
+
+    async function cargar() {
+      try { lista = (await api('/api/disponibilidades')).disponibilidades; pintar(); } catch (e) { mostrarError(e); }
+    }
+
+    $('formulario').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const cuerpo = { dia_semana: $('dia').value, hora_inicio: $('inicio').value, hora_fin: $('fin').value };
+      try {
+        const d = await api(editando ? `/api/disponibilidades/${editando}` : '/api/disponibilidades', { method: editando ? 'PUT' : 'POST', body: cuerpo });
+        mensaje(d.mensaje);
+        reiniciar();
+        cargar();
+      } catch (err) { mostrarError(err); }
+    });
+
+    $('btnCancelar').addEventListener('click', reiniciar);
+
+    $('cuerpo').addEventListener('click', async (e) => {
+      const ed = e.target.closest('[data-editar]');
+      const el = e.target.closest('[data-eliminar]');
+      if (ed) {
+        const d = lista.find((x) => x.id_disponibilidad == ed.dataset.editar);
+        editando = d.id_disponibilidad;
+        $('dia').value = d.dia_semana; $('inicio').value = fmtHora(d.hora_inicio); $('fin').value = fmtHora(d.hora_fin);
+        $('formTitulo').textContent = 'Editar horario';
+        $('btnGuardar').textContent = 'Guardar cambios';
+        $('btnCancelar').style.display = '';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      if (el && confirm('¿Eliminar este horario?')) {
+        try { mensaje((await api('/api/disponibilidades/' + el.dataset.eliminar, { method: 'DELETE' })).mensaje); cargar(); }
+        catch (err) { mostrarError(err); }
+      }
+    });
+
+    (async () => { if (await iniciarPagina(['Tutor'])) cargar(); })();
+  </script>
+</body>
+</html>

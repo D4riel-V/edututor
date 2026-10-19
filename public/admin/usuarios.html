@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EduTutor - Usuarios</title>
+  <link rel="stylesheet" href="/css/estilos.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="marca" href="/">EduTutor</a>
+    <button id="menuBtn" class="menu-btn" aria-label="Menú">☰</button>
+    <nav id="nav" class="nav"></nav>
+  </header>
+
+  <main class="contenedor">
+    <div class="fila-titulo">
+      <div>
+        <h1>Usuarios</h1>
+        <p class="subtitulo" style="margin:0">Administra estudiantes, tutores y administradores.</p>
+      </div>
+      <button class="btn" id="btnNuevo" type="button">+ Nuevo usuario</button>
+    </div>
+
+    <form id="formulario" class="tarjeta" style="display:none" novalidate>
+      <h2 id="formTitulo">Nuevo usuario</h2>
+      <div class="grid-form">
+        <div class="campo"><label for="nombre">Nombre</label><input id="nombre" maxlength="60" required></div>
+        <div class="campo"><label for="apellido">Apellido</label><input id="apellido" maxlength="60" required></div>
+        <div class="campo"><label for="correo">Correo</label><input type="email" id="correo" maxlength="100" required></div>
+        <div class="campo"><label for="contrasena">Contraseña</label><input type="password" id="contrasena" minlength="6" autocomplete="new-password"></div>
+        <div class="campo">
+          <label for="rol">Tipo de usuario</label>
+          <select id="rol"><option>Estudiante</option><option>Tutor</option><option>Administrador</option></select>
+        </div>
+        <div class="campo" id="campoEstado" style="display:none">
+          <label for="estado">Estado</label>
+          <select id="estado"><option value="1">Activo</option><option value="0">Desactivado</option></select>
+        </div>
+      </div>
+      <div class="botones">
+        <button class="btn" type="submit">Guardar</button>
+        <button class="btn btn-sec" type="button" id="btnCancelar">Cancelar</button>
+      </div>
+    </form>
+
+    <div class="tarjeta">
+      <div class="grid-form">
+        <div class="campo"><label for="fq">Buscar</label><input id="fq" placeholder="Nombre o correo"></div>
+        <div class="campo">
+          <label for="frol">Tipo</label>
+          <select id="frol"><option value="">Todos</option><option>Estudiante</option><option>Tutor</option><option>Administrador</option></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="tarjeta tabla-wrap" style="padding:0">
+      <table>
+        <thead><tr><th>Nombre</th><th>Correo</th><th>Tipo</th><th>Estado</th><th>Registro</th><th></th></tr></thead>
+        <tbody id="cuerpo"></tbody>
+      </table>
+    </div>
+  </main>
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let usuarios = [];
+    let editando = null;
+    let yo = null;
+    let temporizador;
+
+    function abrirForm(u) {
+      editando = u ? u.id_usuario : null;
+      $('formTitulo').textContent = u ? 'Editar usuario' : 'Nuevo usuario';
+      $('nombre').value = u ? u.nombre : '';
+      $('apellido').value = u ? u.apellido : '';
+      $('correo').value = u ? u.correo : '';
+      $('contrasena').value = '';
+      $('rol').value = u ? u.rol : 'Estudiante';
+      $('estado').value = u ? u.estado : 1;
+      // Al editar solo se pueden cambiar nombre, apellido y estado.
+      ['correo', 'contrasena', 'rol'].forEach((id) => { $(id).disabled = !!u; });
+      $('campoEstado').style.display = u ? '' : 'none';
+      $('formulario').style.display = '';
+      $('nombre').focus();
+    }
+
+    function pintar() {
+      $('cuerpo').innerHTML = usuarios.length ? usuarios.map((u) => `
+        <tr>
+          <td>${esc(u.nombre)} ${esc(u.apellido)}</td>
+          <td>${esc(u.correo)}</td>
+          <td>${esc(u.rol)}</td>
+          <td>${u.estado ? '<span class="badge b-Activa">Activo</span>' : '<span class="badge b-Cancelada">Desactivado</span>'}</td>
+          <td>${fmtFecha(u.fecha_registro)}</td>
+          <td><div class="acciones">
+            <button class="btn btn-sec btn-chico" data-editar="${u.id_usuario}">Editar</button>
+            ${u.id_usuario !== yo.id ? `<button class="btn btn-peligro btn-chico" data-eliminar="${u.id_usuario}">Eliminar</button>` : ''}
+          </div></td>
+        </tr>`).join('')
+        : '<tr><td colspan="6" class="vacio">No se encontraron usuarios.</td></tr>';
+    }
+
+    async function cargar() {
+      const p = new URLSearchParams();
+      if ($('fq').value.trim()) p.set('q', $('fq').value.trim());
+      if ($('frol').value) p.set('rol', $('frol').value);
+      try { usuarios = (await api('/api/usuarios?' + p)).usuarios; pintar(); } catch (e) { mostrarError(e); }
+    }
+
+    $('btnNuevo').addEventListener('click', () => abrirForm(null));
+    $('btnCancelar').addEventListener('click', () => { $('formulario').style.display = 'none'; });
+    $('frol').addEventListener('change', cargar);
+    $('fq').addEventListener('input', () => { clearTimeout(temporizador); temporizador = setTimeout(cargar, 300); });
+
+    $('formulario').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        let d;
+        if (editando) {
+          d = await api('/api/usuarios/' + editando, { method: 'PUT', body: { nombre: $('nombre').value, apellido: $('apellido').value, estado: $('estado').value === '1' } });
+        } else {
+          d = await api('/api/usuarios', { method: 'POST', body: { nombre: $('nombre').value, apellido: $('apellido').value, correo: $('correo').value, contrasena: $('contrasena').value, rol: $('rol').value } });
+        }
+        mensaje(d.mensaje);
+        $('formulario').style.display = 'none';
+        cargar();
+      } catch (err) { mostrarError(err); }
+    });
+
+    $('cuerpo').addEventListener('click', async (e) => {
+      const ed = e.target.closest('[data-editar]');
+      const el = e.target.closest('[data-eliminar]');
+      if (ed) abrirForm(usuarios.find((u) => u.id_usuario == ed.dataset.editar));
+      if (el && confirm('¿Eliminar este usuario? Esta acción no se puede deshacer.')) {
+        try { mensaje((await api('/api/usuarios/' + el.dataset.eliminar, { method: 'DELETE' })).mensaje); cargar(); }
+        catch (err) { mostrarError(err); }
+      }
+    });
+
+    (async () => { yo = await iniciarPagina(['Administrador']); if (yo) cargar(); })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EduTutor - Iniciar sesión</title>
+  <link rel="stylesheet" href="/css/estilos.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+  <div class="acceso">
+    <div class="acceso-caja">
+      <h1>EduTutor</h1>
+      <p class="subtitulo">Plataforma de tutorías académicas</p>
+
+      <div id="error" class="error-form" role="alert"></div>
+
+      <form id="formLogin" novalidate>
+        <div class="campo">
+          <label for="correo">Correo</label>
+          <input type="email" id="correo" autocomplete="username" placeholder="tucorreo@ejemplo.com" required>
+        </div>
+        <div class="campo">
+          <label for="contrasena">Contraseña</label>
+          <input type="password" id="contrasena" autocomplete="current-password" required>
+        </div>
+        <button class="btn" type="submit" id="btnIngresar">Ingresar</button>
+      </form>
+
+      <p class="pie-acceso">¿No tienes cuenta? <a href="/registro.html">Regístrate aquí</a></p>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script>
+    const error = document.getElementById('error');
+
+    // Si ya hay una sesión activa, se envía al panel que corresponde.
+    api('/api/auth/me', { sinRedirigir: true })
+      .then((d) => { location.href = INICIO[d.usuario.rol]; })
+      .catch(() => {});
+
+    document.getElementById('formLogin').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      error.classList.remove('visible');
+      const btn = document.getElementById('btnIngresar');
+      btn.disabled = true;
+      try {
+        const d = await api('/api/auth/login', {
+          method: 'POST',
+          sinRedirigir: true,
+          body: {
+            correo: document.getElementById('correo').value,
+            contrasena: document.getElementById('contrasena').value
+          }
+        });
+        location.href = INICIO[d.usuario.rol];
+      } catch (err) {
+        error.textContent = err.message;
+        error.classList.add('visible');
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

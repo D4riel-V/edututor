@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EduTutor - Mi perfil</title>
+  <link rel="stylesheet" href="/css/estilos.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="marca" href="/">EduTutor</a>
+    <button id="menuBtn" class="menu-btn" aria-label="Menú">☰</button>
+    <nav id="nav" class="nav"></nav>
+  </header>
+
+  <main class="contenedor">
+    <h1>Mi perfil</h1>
+    <p class="subtitulo">Actualiza tus datos personales.</p>
+
+    <form id="formPerfil" class="tarjeta" novalidate>
+      <div class="grid-form">
+        <div class="campo"><label for="nombre">Nombre</label><input id="nombre" maxlength="60" required></div>
+        <div class="campo"><label for="apellido">Apellido</label><input id="apellido" maxlength="60" required></div>
+        <div class="campo"><label for="correo">Correo</label><input id="correo" readonly></div>
+        <div class="campo"><label for="rol">Tipo de usuario</label><input id="rol" readonly></div>
+      </div>
+
+      <div id="bloqueEstudiante" style="display:none">
+        <div class="grid-form">
+          <div class="campo"><label for="grado">Grado</label><input id="grado" maxlength="30"></div>
+          <div class="campo"><label for="seccion">Sección</label><input id="seccion" maxlength="10"></div>
+          <div class="campo"><label for="telefonoE">Teléfono</label><input id="telefonoE" maxlength="20"></div>
+        </div>
+      </div>
+
+      <div id="bloqueTutor" style="display:none">
+        <div class="grid-form">
+          <div class="campo"><label for="especialidad">Especialidad</label><input id="especialidad" maxlength="100"></div>
+          <div class="campo"><label for="telefonoT">Teléfono</label><input id="telefonoT" maxlength="20"></div>
+        </div>
+        <div class="campo"><label for="descripcion">Sobre mí</label><textarea id="descripcion" placeholder="Cuéntales a los estudiantes tu experiencia y cómo ayudas."></textarea></div>
+        <div class="campo">
+          <label>Materias que puedo impartir</label>
+          <div id="listaMaterias" class="checks"></div>
+          <div class="ayuda">Solo podrás crear tutorías de las materias que marques aquí.</div>
+        </div>
+      </div>
+
+      <hr style="border:0;border-top:1px solid var(--borde);margin:18px 0">
+      <div class="campo" style="max-width:340px">
+        <label for="nueva">Nueva contraseña (opcional)</label>
+        <input type="password" id="nueva" autocomplete="new-password" minlength="6">
+        <div class="ayuda">Déjala vacía si no quieres cambiarla.</div>
+      </div>
+
+      <div class="botones"><button class="btn" type="submit">Guardar cambios</button></div>
+    </form>
+  </main>
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let rol = null;
+
+    (async () => {
+      const usuario = await iniciarPagina();
+      if (!usuario) return;
+      rol = usuario.rol;
+      try {
+        const { perfil } = await api('/api/perfil');
+        $('nombre').value = perfil.nombre;
+        $('apellido').value = perfil.apellido;
+        $('correo').value = perfil.correo;
+        $('rol').value = perfil.rol;
+
+        if (rol === 'Estudiante') {
+          $('bloqueEstudiante').style.display = '';
+          $('grado').value = perfil.grado || '';
+          $('seccion').value = perfil.seccion || '';
+          $('telefonoE').value = perfil.telefono || '';
+        }
+        if (rol === 'Tutor') {
+          $('bloqueTutor').style.display = '';
+          $('especialidad').value = perfil.especialidad || '';
+          $('telefonoT').value = perfil.telefono || '';
+          $('descripcion').value = perfil.descripcion || '';
+          const { materias } = await api('/api/materias');
+          const mias = new Set(perfil.materias.map((m) => m.id_materia));
+          $('listaMaterias').innerHTML = materias.map((m) =>
+            `<label><input type="checkbox" value="${m.id_materia}" ${mias.has(m.id_materia) ? 'checked' : ''}> ${esc(m.nombre)}</label>`).join('')
+            || '<span class="ayuda">Aún no hay materias registradas.</span>';
+        }
+      } catch (e) { mostrarError(e); }
+    })();
+
+    $('formPerfil').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const cuerpo = { nombre: $('nombre').value, apellido: $('apellido').value, nuevaContrasena: $('nueva').value };
+      if (rol === 'Estudiante') Object.assign(cuerpo, { grado: $('grado').value, seccion: $('seccion').value, telefono: $('telefonoE').value });
+      if (rol === 'Tutor') {
+        Object.assign(cuerpo, {
+          especialidad: $('especialidad').value, telefono: $('telefonoT').value, descripcion: $('descripcion').value,
+          materias: [...document.querySelectorAll('#listaMaterias input:checked')].map((c) => Number(c.value))
+        });
+      }
+      try {
+        const d = await api('/api/perfil', { method: 'PUT', body: cuerpo });
+        $('nueva').value = '';
+        mensaje(d.mensaje);
+      } catch (err) { mostrarError(err); }
+    });
+  </script>
+</body>
+</html>

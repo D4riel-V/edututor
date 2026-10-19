@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EduTutor - Crear cuenta</title>
+  <link rel="stylesheet" href="/css/estilos.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+  <div class="acceso">
+    <div class="acceso-caja" style="width:min(560px,100%)">
+      <h1>Crear cuenta</h1>
+      <p class="subtitulo">Únete a EduTutor como estudiante o tutor</p>
+
+      <div id="error" class="error-form" role="alert"></div>
+
+      <form id="formRegistro" novalidate>
+        <div class="campo">
+          <label>Quiero registrarme como</label>
+          <div class="radios">
+            <label><input type="radio" name="rol" value="Estudiante" checked> Estudiante</label>
+            <label><input type="radio" name="rol" value="Tutor"> Tutor</label>
+          </div>
+        </div>
+
+        <div class="grid-form">
+          <div class="campo"><label for="nombre">Nombre</label><input id="nombre" maxlength="60" required></div>
+          <div class="campo"><label for="apellido">Apellido</label><input id="apellido" maxlength="60" required></div>
+        </div>
+        <div class="campo"><label for="correo">Correo</label><input type="email" id="correo" maxlength="100" autocomplete="username" required></div>
+        <div class="campo">
+          <label for="contrasena">Contraseña</label>
+          <input type="password" id="contrasena" autocomplete="new-password" minlength="6" required>
+          <div class="ayuda">Mínimo 6 caracteres.</div>
+        </div>
+        <div class="campo"><label for="confirmar">Confirmar contraseña</label><input type="password" id="confirmar" autocomplete="new-password" required></div>
+
+        <div id="datosEstudiante" class="grid-form">
+          <div class="campo"><label for="grado">Grado</label><input id="grado" maxlength="30" placeholder="Ej: Segundo año"></div>
+          <div class="campo"><label for="seccion">Sección</label><input id="seccion" maxlength="10" placeholder="Ej: A"></div>
+        </div>
+        <div id="datosTutor" class="campo" style="display:none">
+          <label for="especialidad">Especialidad</label>
+          <input id="especialidad" maxlength="100" placeholder="Ej: Matemática y Física">
+        </div>
+
+        <button class="btn" type="submit" id="btnRegistrar">Registrarme</button>
+      </form>
+
+      <p class="pie-acceso">¿Ya tienes cuenta? <a href="/index.html">Inicia sesión</a></p>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script>
+    const error = document.getElementById('error');
+    const rolActual = () => document.querySelector('input[name="rol"]:checked').value;
+
+    document.querySelectorAll('input[name="rol"]').forEach((r) => r.addEventListener('change', () => {
+      document.getElementById('datosEstudiante').style.display = rolActual() === 'Estudiante' ? '' : 'none';
+      document.getElementById('datosTutor').style.display = rolActual() === 'Tutor' ? '' : 'none';
+    }));
+
+    function mostrar(texto) { error.textContent = texto; error.classList.add('visible'); }
+
+    document.getElementById('formRegistro').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      error.classList.remove('visible');
+      const v = (id) => document.getElementById(id).value;
+      if (v('contrasena') !== v('confirmar')) return mostrar('Las contraseñas no coinciden.');
+
+      const btn = document.getElementById('btnRegistrar');
+      btn.disabled = true;
+      try {
+        await api('/api/auth/registro', {
+          method: 'POST',
+          sinRedirigir: true,
+          body: {
+            rol: rolActual(), nombre: v('nombre'), apellido: v('apellido'), correo: v('correo'),
+            contrasena: v('contrasena'), grado: v('grado'), seccion: v('seccion'), especialidad: v('especialidad')
+          }
+        });
+        alert('Cuenta creada correctamente. Ahora puedes iniciar sesión.');
+        location.href = '/index.html';
+      } catch (err) {
+        mostrar(err.message);
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

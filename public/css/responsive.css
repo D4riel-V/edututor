@@ -1,0 +1,20 @@
+/* Diseño responsivo: tablet y teléfono (RNF02 y RNF12) */
+
+@media (max-width: 860px) {
+  .contenedor { padding: 18px 14px 50px; }
+  .topbar { flex-wrap: wrap; padding: 8px 14px; }
+  .menu-btn { display: block; }
+  .nav { display: none; width: 100%; flex-direction: column; align-items: stretch; padding-bottom: 8px; }
+  .nav.abierto { display: flex; }
+  .nav .usuario { padding-top: 4px; }
+}
+
+@media (max-width: 600px) {
+  h1 { font-size: 1.35rem; }
+  .tarjeta { padding: 14px; }
+  .grid-cards { grid-template-columns: 1fr; }
+  .botones .btn { flex: 1 1 100%; text-align: center; }
+  .acceso-caja { padding: 22px; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  th, td { padding: 8px; font-size: .85rem; }
+}

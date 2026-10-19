@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EduTutor - Mis solicitudes</title>
+  <link rel="stylesheet" href="/css/estilos.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="marca" href="/">EduTutor</a>
+    <button id="menuBtn" class="menu-btn" aria-label="Menú">☰</button>
+    <nav id="nav" class="nav"></nav>
+  </header>
+
+  <main class="contenedor">
+    <div class="fila-titulo">
+      <div>
+        <h1>Mis solicitudes</h1>
+        <p class="subtitulo" style="margin:0">Consulta el estado de las tutorías que solicitaste.</p>
+      </div>
+      <div style="min-width:200px">
+        <label for="filtroEstado">Estado</label>
+        <select id="filtroEstado">
+          <option value="">Todas</option>
+          <option>Pendiente</option><option>Aceptada</option><option>Rechazada</option><option>Cancelada</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="tarjeta tabla-wrap" style="padding:0">
+      <table>
+        <thead><tr><th>Tutoría</th><th>Materia</th><th>Tutor</th><th>Fecha y hora</th><th>Estado</th><th>Solicitada</th><th></th></tr></thead>
+        <tbody id="cuerpo"></tbody>
+      </table>
+    </div>
+  </main>
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let datos = [];
+
+    function pintar() {
+      const f = $('filtroEstado').value;
+      const lista = datos.filter((s) => !f || s.estado === f);
+      $('cuerpo').innerHTML = lista.length ? lista.map((s) => `
+        <tr>
+          <td>${esc(s.titulo)}<br><span class="ayuda">${esc(s.modalidad)}</span></td>
+          <td>${esc(s.materia)}</td>
+          <td>${esc(s.tutor)}</td>
+          <td>${fmtFecha(s.fecha)}<br>${fmtHora(s.hora_inicio)} - ${fmtHora(s.hora_fin)}</td>
+          <td>${badge(s.estado)}</td>
+          <td>${fmtFechaHora(s.fecha_solicitud)}</td>
+          <td>${['Pendiente', 'Aceptada'].includes(s.estado) ? `<button class="btn btn-peligro btn-chico" data-cancelar="${s.id_solicitud}">Cancelar</button>` : ''}</td>
+        </tr>`).join('')
+        : '<tr><td colspan="7" class="vacio">No tienes solicitudes todavía. Busca una tutoría y solicítala.</td></tr>';
+    }
+
+    async function cargar() {
+      try { datos = (await api('/api/solicitudes/mias')).solicitudes; pintar(); } catch (e) { mostrarError(e); }
+    }
+
+    $('filtroEstado').addEventListener('change', pintar);
+    $('cuerpo').addEventListener('click', async (e) => {
+      const b = e.target.closest('[data-cancelar]');
+      if (!b || !confirm('¿Seguro que deseas cancelar esta solicitud?')) return;
+      try {
+        const d = await api(`/api/solicitudes/${b.dataset.cancelar}/cancelar`, { method: 'PUT' });
+        mensaje(d.mensaje);
+        cargar();
+      } catch (err) { mostrarError(err); }
+    });
+
+    (async () => { if (await iniciarPagina(['Estudiante'])) cargar(); })();
+  </script>
+</body>
+</html>

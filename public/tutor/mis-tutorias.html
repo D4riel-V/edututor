@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EduTutor - Mis tutorías</title>
+  <link rel="stylesheet" href="/css/estilos.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="marca" href="/">EduTutor</a>
+    <button id="menuBtn" class="menu-btn" aria-label="Menú">☰</button>
+    <nav id="nav" class="nav"></nav>
+  </header>
+
+  <main class="contenedor">
+    <div class="fila-titulo">
+      <div>
+        <h1>Mis tutorías</h1>
+        <p class="subtitulo" style="margin:0">Crea y administra las tutorías que ofreces.</p>
+      </div>
+      <button class="btn" id="btnNueva" type="button">+ Nueva tutoría</button>
+    </div>
+
+    <div id="sinMaterias" class="aviso" style="display:none">
+      Aún no tienes materias en tu perfil. <a href="/perfil.html">Agrégalas aquí</a> para poder crear tutorías.
+    </div>
+
+    <form id="formulario" class="tarjeta" style="display:none" novalidate>
+      <h2 id="formTitulo">Nueva tutoría</h2>
+      <div class="grid-form">
+        <div class="campo"><label for="titulo">Título</label><input id="titulo" maxlength="100" placeholder="Ej: Repaso de ecuaciones" required></div>
+        <div class="campo"><label for="materia">Materia</label><select id="materia" required></select></div>
+        <div class="campo"><label for="fecha">Fecha</label><input type="date" id="fecha" required></div>
+        <div class="campo"><label for="inicio">Hora de inicio</label><input type="time" id="inicio" required></div>
+        <div class="campo"><label for="fin">Hora de fin</label><input type="time" id="fin" required></div>
+        <div class="campo"><label for="cupo">Cupo</label><input type="number" id="cupo" min="1" max="50" value="5" required></div>
+        <div class="campo">
+          <label for="modalidad">Modalidad</label>
+          <select id="modalidad"><option>Presencial</option><option>Virtual</option></select>
+        </div>
+        <div class="campo" id="campoEstado" style="display:none">
+          <label for="estado">Estado</label>
+          <select id="estado"><option>Activa</option><option>Cerrada</option><option>Cancelada</option></select>
+        </div>
+      </div>
+      <div class="campo"><label for="descripcion">Descripción</label><textarea id="descripcion" placeholder="¿Qué temas se repasarán?"></textarea></div>
+      <div class="botones">
+        <button class="btn" type="submit">Guardar</button>
+        <button class="btn btn-sec" type="button" id="btnCancelar">Cancelar</button>
+      </div>
+    </form>
+
+    <div class="tarjeta tabla-wrap" style="padding:0">
+      <table>
+        <thead><tr><th>Título</th><th>Materia</th><th>Fecha y hora</th><th>Cupo</th><th>Estado</th><th>Pendientes</th><th></th></tr></thead>
+        <tbody id="cuerpo"></tbody>
+      </table>
+    </div>
+  </main>
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let tutorias = [];
+    let editando = null;
+
+    function abrirForm(t) {
+      editando = t ? t.id_tutoria : null;
+      $('formTitulo').textContent = t ? 'Editar tutoría' : 'Nueva tutoría';
+      $('campoEstado').style.display = t ? '' : 'none';
+      $('titulo').value = t ? t.titulo : '';
+      $('materia').value = t ? t.id_materia : $('materia').options[0]?.value || '';
+      $('fecha').value = t ? t.fecha : '';
+      $('fecha').min = t ? '' : new Date().toLocaleDateString('en-CA');
+      $('inicio').value = t ? fmtHora(t.hora_inicio) : '';
+      $('fin').value = t ? fmtHora(t.hora_fin) : '';
+      $('cupo').value = t ? t.cupo : 5;
+      $('modalidad').value = t ? t.modalidad : 'Presencial';
+      $('estado').value = t ? t.estado : 'Activa';
+      $('descripcion').value = t ? t.descripcion || '' : '';
+      $('formulario').style.display = '';
+      $('titulo').focus();
+      $('formulario').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function pintar() {
+      $('cuerpo').innerHTML = tutorias.length ? tutorias.map((t) => `
+        <tr>
+          <td>${esc(t.titulo)}<br><span class="ayuda">${esc(t.modalidad)}</span></td>
+          <td>${esc(t.materia)}</td>
+          <td>${fmtFecha(t.fecha)}<br>${fmtHora(t.hora_inicio)} - ${fmtHora(t.hora_fin)}</td>
+          <td>${t.aceptadas} / ${t.cupo}</td>
+          <td>${badge(t.estado)}</td>
+          <td>${t.pendientes}</td>
+          <td><div class="acciones">
+            <button class="btn btn-sec btn-chico" data-editar="${t.id_tutoria}">Editar</button>
+            <button class="btn btn-peligro btn-chico" data-eliminar="${t.id_tutoria}">Eliminar</button>
+          </div></td>
+        </tr>`).join('')
+        : '<tr><td colspan="7" class="vacio">Todavía no has creado tutorías.</td></tr>';
+    }
+
+    async function cargar() {
+      try { tutorias = (await api('/api/tutorias/mias')).tutorias; pintar(); } catch (e) { mostrarError(e); }
+    }
+
+    $('btnNueva').addEventListener('click', () => abrirForm(null));
+    $('btnCancelar').addEventListener('click', () => { $('formulario').style.display = 'none'; });
+
+    $('formulario').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const cuerpo = {
+        titulo: $('titulo').value, id_materia: $('materia').value, fecha: $('fecha').value,
+        hora_inicio: $('inicio').value, hora_fin: $('fin').value, cupo: $('cupo').value,
+        modalidad: $('modalidad').value, descripcion: $('descripcion').value
+      };
+      if (editando) cuerpo.estado = $('estado').value;
+      try {
+        const d = await api(editando ? `/api/tutorias/${editando}` : '/api/tutorias', { method: editando ? 'PUT' : 'POST', body: cuerpo });
+        mensaje(d.mensaje);
+        $('formulario').style.display = 'none';
+        cargar();
+      } catch (err) { mostrarError(err); }
+    });
+
+    $('cuerpo').addEventListener('click', async (e) => {
+      const ed = e.target.closest('[data-editar]');
+      const el = e.target.closest('[data-eliminar]');
+      if (ed) abrirForm(tutorias.find((t) => t.id_tutoria == ed.dataset.editar));
+      if (el && confirm('¿Eliminar esta tutoría? También se borrarán sus solicitudes.')) {
+        try { mensaje((await api('/api/tutorias/' + el.dataset.eliminar, { method: 'DELETE' })).mensaje); cargar(); }
+        catch (err) { mostrarError(err); }
+      }
+    });
+
+    (async () => {
+      if (!(await iniciarPagina(['Tutor']))) return;
+      try {
+        const { perfil } = await api('/api/perfil');
+        $('materia').innerHTML = perfil.materias.map((m) => `<option value="${m.id_materia}">${esc(m.nombre)}</option>`).join('');
+        if (!perfil.materias.length) { $('sinMaterias').style.display = ''; $('btnNueva').disabled = true; }
+      } catch (e) { mostrarError(e); }
+      cargar();
+    })();
+  </script>
+</body>
+</html>

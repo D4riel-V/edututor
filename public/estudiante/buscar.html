@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EduTutor - Buscar tutorías</title>
+  <link rel="stylesheet" href="/css/estilos.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="marca" href="/">EduTutor</a>
+    <button id="menuBtn" class="menu-btn" aria-label="Menú">☰</button>
+    <nav id="nav" class="nav"></nav>
+  </header>
+
+  <main class="contenedor">
+    <h1>Buscar tutorías</h1>
+    <p class="subtitulo">Encuentra apoyo académico por materia, tutor u horario.</p>
+
+    <form id="filtros" class="tarjeta">
+      <div class="grid-form">
+        <div class="campo"><label for="q">Buscar</label><input id="q" placeholder="Tema, materia o tutor"></div>
+        <div class="campo"><label for="materia">Materia</label><select id="materia"><option value="">Todas</option></select></div>
+        <div class="campo">
+          <label for="franja">Horario</label>
+          <select id="franja">
+            <option value="">Todos</option>
+            <option value="manana">Mañana (antes de 12:00)</option>
+            <option value="tarde">Tarde (desde 12:00)</option>
+          </select>
+        </div>
+      </div>
+      <div class="botones">
+        <button class="btn" type="submit">Filtrar</button>
+        <button class="btn btn-sec" type="button" id="limpiar">Limpiar</button>
+      </div>
+    </form>
+
+    <div id="resultados" class="grid-cards"></div>
+  </main>
+
+  <dialog id="detalle">
+    <h2 id="dTitulo"></h2>
+    <div id="dCuerpo"></div>
+    <div class="campo" id="dComentarioWrap">
+      <label for="dComentario">Comentario para el tutor (opcional)</label>
+      <textarea id="dComentario" maxlength="255" placeholder="Ej: Necesito repasar fracciones."></textarea>
+    </div>
+    <div class="botones">
+      <button class="btn" id="dSolicitar" type="button">Solicitar tutoría</button>
+      <button class="btn btn-sec" id="dCerrar" type="button">Cerrar</button>
+    </div>
+  </dialog>
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let tutoriaAbierta = null;
+
+    function cupos(t) { return Math.max(t.cupo - t.aceptadas, 0); }
+
+    function botonSolicitar(t) {
+      if (t.mi_estado && t.mi_estado !== 'Cancelada') return `<span class="badge b-${esc(t.mi_estado)}">Tu solicitud: ${esc(t.mi_estado)}</span>`;
+      if (cupos(t) === 0) return '<span class="badge b-Cerrada">Sin cupo</span>';
+      return `<button class="btn btn-chico" data-solicitar="${t.id_tutoria}">Solicitar</button>`;
+    }
+
+    async function cargar() {
+      const p = new URLSearchParams();
+      if ($('q').value.trim()) p.set('q', $('q').value.trim());
+      if ($('materia').value) p.set('materia', $('materia').value);
+      if ($('franja').value) p.set('franja', $('franja').value);
+      try {
+        const { tutorias } = await api('/api/tutorias?' + p);
+        $('resultados').innerHTML = tutorias.length ? tutorias.map((t) => `
+          <article class="card-tutoria">
+            <div><span class="badge b-materia">${esc(t.materia)}</span></div>
+            <h3>${esc(t.titulo)}</h3>
+            <div class="meta">Tutor: ${esc(t.tutor)}</div>
+            <div class="meta">${fmtFecha(t.fecha)} · ${fmtHora(t.hora_inicio)} - ${fmtHora(t.hora_fin)}</div>
+            <div class="meta">${esc(t.modalidad)} · Cupos disponibles: ${cupos(t)} de ${t.cupo}</div>
+            <div class="acciones">
+              <button class="btn btn-sec btn-chico" data-ver="${t.id_tutoria}">Ver</button>
+              ${botonSolicitar(t)}
+            </div>
+          </article>`).join('')
+          : '<div class="tarjeta vacio" style="grid-column:1/-1">No hay tutorías disponibles con esos filtros.</div>';
+      } catch (e) { mostrarError(e); }
+    }
+
+    async function solicitar(id, comentario) {
+      try {
+        const d = await api('/api/solicitudes', { method: 'POST', body: { id_tutoria: id, comentario } });
+        mensaje(d.mensaje);
+        $('detalle').close();
+        cargar();
+      } catch (e) { mostrarError(e); }
+    }
+
+    async function ver(id) {
+      try {
+        const { tutoria: t } = await api('/api/tutorias/' + id);
+        tutoriaAbierta = t;
+        $('dTitulo').textContent = t.titulo;
+        $('dCuerpo').innerHTML = `
+          <p class="dato"><b>Materia</b> ${esc(t.materia)}</p>
+          <p class="dato"><b>Fecha</b> ${fmtFecha(t.fecha)}</p>
+          <p class="dato"><b>Horario</b> ${fmtHora(t.hora_inicio)} - ${fmtHora(t.hora_fin)}</p>
+          <p class="dato"><b>Modalidad</b> ${esc(t.modalidad)}</p>
+          <p class="dato"><b>Cupos</b> ${Math.max(t.cupo - t.aceptadas, 0)} de ${t.cupo}</p>
+          <p class="dato"><b>Descripción</b> ${esc(t.descripcion || 'Sin descripción.')}</p>
+          <hr style="border:0;border-top:1px solid var(--borde)">
+          <p class="dato"><b>Tutor</b> ${esc(t.tutor)}</p>
+          <p class="dato"><b>Especialidad</b> ${esc(t.especialidad || 'No indicada')}</p>
+          <p class="dato"><b>Sobre el tutor</b> ${esc(t.perfil_tutor || 'Sin descripción.')}</p>`;
+        const puede = !(t.mi_estado && t.mi_estado !== 'Cancelada') && t.estado === 'Activa' && t.aceptadas < t.cupo;
+        $('dSolicitar').style.display = puede ? '' : 'none';
+        $('dComentarioWrap').style.display = puede ? '' : 'none';
+        $('dComentario').value = '';
+        $('detalle').showModal();
+      } catch (e) { mostrarError(e); }
+    }
+
+    $('resultados').addEventListener('click', (e) => {
+      const ver_ = e.target.closest('[data-ver]');
+      const sol = e.target.closest('[data-solicitar]');
+      if (ver_) ver(ver_.dataset.ver);
+      if (sol && confirm('¿Deseas solicitar esta tutoría?')) solicitar(Number(sol.dataset.solicitar), '');
+    });
+    $('dSolicitar').addEventListener('click', () => solicitar(tutoriaAbierta.id_tutoria, $('dComentario').value));
+    $('dCerrar').addEventListener('click', () => $('detalle').close());
+    $('filtros').addEventListener('submit', (e) => { e.preventDefault(); cargar(); });
+    $('limpiar').addEventListener('click', () => { $('filtros').reset(); cargar(); });
+
+    (async () => {
+      const usuario = await iniciarPagina(['Estudiante']);
+      if (!usuario) return;
+      try {
+        const { materias } = await api('/api/materias');
+        $('materia').insertAdjacentHTML('beforeend', materias.map((m) => `<option value="${m.id_materia}">${esc(m.nombre)}</option>`).join(''));
+      } catch (e) { mostrarError(e); }
+      cargar();
+    })();
+  </script>
+</body>
+</html>

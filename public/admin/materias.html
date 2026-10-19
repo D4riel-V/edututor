@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EduTutor - Materias</title>
+  <link rel="stylesheet" href="/css/estilos.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="marca" href="/">EduTutor</a>
+    <button id="menuBtn" class="menu-btn" aria-label="Menú">☰</button>
+    <nav id="nav" class="nav"></nav>
+  </header>
+
+  <main class="contenedor">
+    <h1>Materias</h1>
+    <p class="subtitulo">Catálogo de materias disponibles para las tutorías.</p>
+
+    <form id="formulario" class="tarjeta" novalidate>
+      <h2 id="formTitulo">Nueva materia</h2>
+      <div class="grid-form">
+        <div class="campo"><label for="nombre">Nombre</label><input id="nombre" maxlength="80" required></div>
+        <div class="campo"><label for="descripcion">Descripción</label><input id="descripcion" maxlength="255"></div>
+      </div>
+      <div class="botones">
+        <button class="btn" type="submit" id="btnGuardar">Agregar materia</button>
+        <button class="btn btn-sec" type="button" id="btnCancelar" style="display:none">Cancelar edición</button>
+      </div>
+    </form>
+
+    <div class="tarjeta tabla-wrap" style="padding:0">
+      <table>
+        <thead><tr><th>Materia</th><th>Descripción</th><th></th></tr></thead>
+        <tbody id="cuerpo"></tbody>
+      </table>
+    </div>
+  </main>
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let lista = [];
+    let editando = null;
+
+    function reiniciar() {
+      editando = null;
+      $('formulario').reset();
+      $('formTitulo').textContent = 'Nueva materia';
+      $('btnGuardar').textContent = 'Agregar materia';
+      $('btnCancelar').style.display = 'none';
+    }
+
+    function pintar() {
+      $('cuerpo').innerHTML = lista.length ? lista.map((m) => `
+        <tr>
+          <td><b>${esc(m.nombre)}</b></td><td>${esc(m.descripcion || '—')}</td>
+          <td><div class="acciones">
+            <button class="btn btn-sec btn-chico" data-editar="${m.id_materia}">Editar</button>
+            <button class="btn btn-peligro btn-chico" data-eliminar="${m.id_materia}">Eliminar</button>
+          </div></td>
+        </tr>`).join('')
+        : '<tr><td colspan="3" class="vacio">No hay materias registradas.</td></tr>';
+    }
+
+    async function cargar() {
+      try { lista = (await api('/api/materias')).materias; pintar(); } catch (e) { mostrarError(e); }
+    }
+
+    $('formulario').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const cuerpo = { nombre: $('nombre').value, descripcion: $('descripcion').value };
+      try {
+        const d = await api(editando ? '/api/materias/' + editando : '/api/materias', { method: editando ? 'PUT' : 'POST', body: cuerpo });
+        mensaje(d.mensaje);
+        reiniciar();
+        cargar();
+      } catch (err) { mostrarError(err); }
+    });
+
+    $('btnCancelar').addEventListener('click', reiniciar);
+
+    $('cuerpo').addEventListener('click', async (e) => {
+      const ed = e.target.closest('[data-editar]');
+      const el = e.target.closest('[data-eliminar]');
+      if (ed) {
+        const m = lista.find((x) => x.id_materia == ed.dataset.editar);
+        editando = m.id_materia;
+        $('nombre').value = m.nombre; $('descripcion').value = m.descripcion || '';
+        $('formTitulo').textContent = 'Editar materia';
+        $('btnGuardar').textContent = 'Guardar cambios';
+        $('btnCancelar').style.display = '';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      if (el && confirm('¿Eliminar esta materia?')) {
+        try { mensaje((await api('/api/materias/' + el.dataset.eliminar, { method: 'DELETE' })).mensaje); cargar(); }
+        catch (err) { mostrarError(err); }
+      }
+    });
+
+    (async () => { if (await iniciarPagina(['Administrador'])) cargar(); })();
+  </script>
+</body>
+</html>

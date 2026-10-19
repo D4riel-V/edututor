@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EduTutor - Estadísticas</title>
+  <link rel="stylesheet" href="/css/estilos.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="marca" href="/">EduTutor</a>
+    <button id="menuBtn" class="menu-btn" aria-label="Menú">☰</button>
+    <nav id="nav" class="nav"></nav>
+  </header>
+
+  <main class="contenedor">
+    <h1>Estadísticas</h1>
+    <p class="subtitulo">Resumen general del uso de la plataforma.</p>
+
+    <div id="stats" class="stats"></div>
+
+    <div class="grid-form" style="align-items:start">
+      <div class="tarjeta">
+        <h2>Solicitudes por estado</h2>
+        <div id="porEstado"></div>
+      </div>
+      <div class="tarjeta">
+        <h2>Materias más solicitadas</h2>
+        <div id="topMaterias"></div>
+      </div>
+    </div>
+  </main>
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    function filasBarra(items, etiqueta, valor) {
+      const max = Math.max(1, ...items.map((i) => i[valor]));
+      return items.length ? items.map((i) => `
+        <div style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;font-size:.9rem"><span>${esc(i[etiqueta])}</span><b>${i[valor]}</b></div>
+          <div class="barra"><div style="width:${(i[valor] / max) * 100}%"></div></div>
+        </div>`).join('') : '<p class="ayuda">Sin datos todavía.</p>';
+    }
+
+    (async () => {
+      if (!(await iniciarPagina(['Administrador']))) return;
+      try {
+        const { totales: t, solicitudesPorEstado, topMaterias } = await api('/api/estadisticas');
+        const tarjetas = [
+          [t.usuarios, 'Usuarios'], [t.estudiantes, 'Estudiantes'], [t.tutores, 'Tutores'],
+          [t.materias, 'Materias'], [t.tutorias_activas, 'Tutorías activas'], [t.tutorias, 'Tutorías (total)'], [t.solicitudes, 'Solicitudes']
+        ];
+        $('stats').innerHTML = tarjetas.map(([n, et]) => `<div class="stat"><div class="num">${n}</div><div class="et">${et}</div></div>`).join('');
+        $('porEstado').innerHTML = filasBarra(solicitudesPorEstado, 'estado', 'total');
+        $('topMaterias').innerHTML = filasBarra(topMaterias, 'nombre', 'solicitudes');
+      } catch (e) { mostrarError(e); }
+    })();
+  </script>
+</body>
+</html>
